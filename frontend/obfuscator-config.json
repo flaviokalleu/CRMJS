@@ -1,5 +1,5 @@
 {
-  "compact": false,
+  "compact": true,
   "controlFlowFlattening": true,
   "controlFlowFlatteningThreshold": 0.9,
   "deadCodeInjection": true,

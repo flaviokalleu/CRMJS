@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaSearch, FaWhatsapp, FaSignInAlt, FaUser } from "react-icons/fa";
+import { FaSearch, FaWhatsapp, FaSignInAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 
 const Navbar = () => {
@@ -25,9 +25,8 @@ const Navbar = () => {
   const submenuLinks = [
     { href: "/", label: "Inicio" },
     { href: "/imoveis?categoria=novo", label: "Imóveis Novos" },
-
     { href: "/imoveis?categoria=usados", label: "Imóveis Usados" },
-    //{ href: "/imoveis?categoria=agio", label: "Ágio" },
+    // { href: "/imoveis?categoria=agio", label: "Ágio" },
     {
       href: "/imoveis?localizacao=Valparaiso de Goiás - Goiás",
       label: "Valparaíso de Goiás",
@@ -39,7 +38,7 @@ const Navbar = () => {
     { href: "/imoveis?localizacao=luziania", label: "Luziania" },
     { href: "/imoveis?localizacao=Jardim Inga - Goias", label: "Jardim Ingá" },
     { href: "/imoveis?localizacao=brasilia", label: "Brasília" },
-    { href: "/imoveis", label: "Todos os Imoveis" },
+    { href: "/imoveis", label: "Todos os Imóveis" },
   ];
 
   return (
@@ -199,6 +198,18 @@ const Navbar = () => {
               <FaSignInAlt />
               <span>Login</span>
             </a>
+            {/* Submenu links for mobile */}
+            <div className="mt-4">
+              {submenuLinks.map(({ href, label }) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="block px-4 py-2 hover:text-[#78b439]"
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
           </div>
         )}
       </nav>

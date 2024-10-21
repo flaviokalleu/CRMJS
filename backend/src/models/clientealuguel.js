@@ -11,19 +11,19 @@ module.exports = (sequelize, DataTypes) => {
   ClienteAluguel.init({
     clienteId: {
       type: DataTypes.INTEGER,
-      allowNull: true, // Permite que seja nulo para que seja gerado automaticamente
+      allowNull: true,
     },
     nome: {
       type: DataTypes.STRING,
-      allowNull: false, // Garante que o nome não pode ser nulo
+      allowNull: false,
     },
     cpf: {
       type: DataTypes.STRING,
-      allowNull: false, // Garante que o CPF não pode ser nulo
+      allowNull: false,
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: false, // Garante que o email não pode ser nulo
+      allowNull: false,
       validate: {
         isEmail: {
           msg: 'Email deve ser um endereço de email válido.',
@@ -32,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     telefone: {
       type: DataTypes.STRING,
-      allowNull: false, // Garante que o telefone não pode ser nulo
+      allowNull: false,
     },
     valor_aluguel: {
       type: DataTypes.DECIMAL,
@@ -57,6 +57,14 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'O campo dia_vencimento deve ser um número inteiro.',
         },
       },
+    },
+    pago: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    historico_pagamentos: {
+      type: DataTypes.JSON,
+      defaultValue: [],
     },
   }, {
     sequelize,

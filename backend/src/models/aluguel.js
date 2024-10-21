@@ -6,7 +6,6 @@ module.exports = (sequelize, DataTypes) => {
     valor_aluguel: DataTypes.FLOAT,
     quartos: DataTypes.INTEGER,
     banheiro: DataTypes.INTEGER,
-    dia_vencimento: DataTypes.INTEGER,
     foto_capa: DataTypes.STRING,
     alugado: {
       type: DataTypes.BOOLEAN,

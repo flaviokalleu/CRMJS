@@ -22,10 +22,10 @@ const checkKey = async (req) => {
         const keyData = snapshot.val();
         
         // Verificação se a chave já está em uso
-        //if (keyData.inUse) {
-        //    console.error('Chave já em uso em outro sistema:', uniqueKey);
-       //     return false; // Retorna false se a chave já estiver em uso
-        //}
+        if (keyData.inUse) {
+            console.error('Chave já em uso em outro sistema:', uniqueKey);
+            return false; // Retorna false se a chave já estiver em uso
+        }
 
         const validityDate = keyData.validity;
         if (!validityDate) {

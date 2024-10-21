@@ -62,7 +62,6 @@ router.post('/', upload.fields([{ name: 'fotoCapa' }, { name: 'fotoAdicional' }]
       valor_aluguel,
       quartos,
       banheiro,
-      dia_vencimento,
       foto_capa: fotoCapa,
       foto_adicional: JSON.stringify(fotoAdicional)
     });
@@ -97,7 +96,6 @@ router.put('/:id', upload.fields([{ name: 'fotoCapa' }, { name: 'fotoAdicional' 
       valor_aluguel,
       quartos,
       banheiro,
-      dia_vencimento,
       foto_capa: fotoCapa || aluguel.foto_capa,
       foto_adicional: fotoAdicional.length ? JSON.stringify(fotoAdicional) : aluguel.foto_adicional
     });

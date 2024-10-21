@@ -1,14 +1,83 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { FaBed, FaBath, FaWhatsapp } from "react-icons/fa";
+import Slider from "react-slick";
 
+// Componente Modal
+const Modal = ({
+  isOpen,
+  onClose,
+  currentImage,
+  setCurrentImage,
+  imageList,
+}) => {
+  if (!isOpen) return null;
+
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+      onClick={handleOverlayClick}
+    >
+      <div className="relative max-w-full max-h-full flex items-center justify-center">
+        <img
+          src={currentImage}
+          alt="Imagem ampliada"
+          className="max-w-full max-h-full rounded-lg"
+        />
+        <button
+          className="absolute top-2 right-2 text-white text-xl focus:outline-none"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
+          ✖
+        </button>
+        <div className="absolute inset-y-0 left-0 flex items-center">
+          <button
+            className="bg-gray-800 text-white p-2 m-2 rounded"
+            onClick={() =>
+              setCurrentImage((prev) =>
+                prev > 0 ? prev - 1 : imageList.length - 1
+              )
+            }
+            aria-label="Imagem anterior"
+          >
+            ◀
+          </button>
+        </div>
+        <div className="absolute inset-y-0 right-0 flex items-center">
+          <button
+            className="bg-gray-800 text-white p-2 m-2 rounded"
+            onClick={() =>
+              setCurrentImage((prev) =>
+                prev < imageList.length - 1 ? prev + 1 : 0
+              )
+            }
+            aria-label="Próxima imagem"
+          >
+            ▶
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Componente Principal ImovelDetail
 const ImovelDetail = () => {
   const { id } = useParams();
   const [imovel, setImovel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageList, setImageList] = useState([]);
-  const [open, setOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [imoveisSemelhantes, setImoveisSemelhantes] = useState([]);
 
   useEffect(() => {
     const fetchImovel = async () => {
@@ -23,10 +92,33 @@ const ImovelDetail = () => {
 
         const data = await response.json();
         setImovel(data.data);
-        const images = data.data.imagens || [];
+
+        const imagesString = data.data.imagens;
+        const images =
+          typeof imagesString === "string"
+            ? JSON.parse(imagesString.replace(/&quot;/g, '"'))
+            : Array.isArray(imagesString)
+            ? imagesString
+            : [];
+
         setImageList(
-          images.map((img) => `${process.env.REACT_APP_API_URL}/${img}`)
+          images.map(
+            (img) =>
+              `${process.env.REACT_APP_API_URL}/${img.replace(/\\/g, "/")}`
+          )
         );
+
+        // Fetch de imóveis semelhantes pela localização
+        const responseSemelhantes = await fetch(
+          `${process.env.REACT_APP_API_URL}/imoveis/${id}/semelhantes`
+        );
+
+        if (!responseSemelhantes.ok) {
+          throw new Error("Imóveis semelhantes não encontrados.");
+        }
+
+        const semelhantesData = await responseSemelhantes.json();
+        setImoveisSemelhantes(semelhantesData);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -38,7 +130,7 @@ const ImovelDetail = () => {
   }, [id]);
 
   if (loading) {
-    return <div className="flex justify-center py-4">Loading...</div>;
+    return <div className="flex justify-center py-4">Carregando...</div>;
   }
 
   if (error) {
@@ -56,6 +148,7 @@ const ImovelDetail = () => {
     descricao_imovel = "Descrição não disponível.",
     quartos = "N/A",
     banheiro = "N/A",
+    localizacao = "Localização não informada",
   } = imovel || {};
 
   const imageUrl = imagem_capa
@@ -67,113 +160,128 @@ const ImovelDetail = () => {
     process.env.REACT_APP_WHATSAPP_NUMBER
   }&text=${encodeURIComponent(whatsappMessage)}`;
 
-  const handleOpen = (index) => {
-    setCurrentImageIndex(index);
-    setOpen(true);
+  const settings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: window.innerWidth < 768 ? 1 : 3,
+    slidesToScroll: 1,
+    centerMode: true,
+    centerPadding: "20px",
+    beforeChange: (current, next) => setCurrentImageIndex(next),
+    swipeToSlide: true,
   };
 
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const handleNext = () => {
-    setCurrentImageIndex((prevIndex) =>
-      prevIndex === imageList.length - 1 ? 0 : prevIndex + 1
-    );
-  };
-
-  const handlePrev = () => {
-    setCurrentImageIndex((prevIndex) =>
-      prevIndex === 0 ? imageList.length - 1 : prevIndex - 1
-    );
+  const settingsSemelhantes = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: window.innerWidth < 768 ? 1 : 4,
+    slidesToScroll: 1,
+    swipeToSlide: true,
   };
 
   return (
-    <div className="py-4 bg-gray-100">
-      <div className="container mx-auto">
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+      <div className="container mx-auto py-8 px-4 flex flex-col md:flex-row">
+        <div className="md:w-2/3 flex flex-col">
           <img
             alt={nome_imovel}
-            className="w-full h-96 object-cover cursor-pointer transition-transform transform hover:scale-105"
-            src={imageUrl}
-            onClick={() => handleOpen(0)}
+            className="max-w-full h-auto object-cover rounded-lg cursor-pointer transition-transform transform hover:scale-105"
+            src={imageList[currentImageIndex] || imageUrl}
+            onClick={() => setIsModalOpen(true)}
           />
-          <div className="p-4">
-            <h2 className="text-gray-800 text-2xl font-bold">{nome_imovel}</h2>
-            <h3 className="text-blue-600 text-xl">
-              R${valor_venda.toFixed(2)}
-            </h3>
-            <p className="text-gray-700">{descricao_imovel}</p>
-            <div className="my-2">
-              <span className="inline-flex items-center px-2 py-1 text-sm font-semibold text-gray-700 border border-gray-300 rounded">
-                Quartos: {quartos}
-              </span>
-              <span className="inline-flex items-center px-2 py-1 text-sm font-semibold text-gray-700 border border-gray-300 rounded">
-                Banheiros: {banheiro}
-              </span>
-            </div>
-            <div className="mt-4">
-              {process.env.REACT_APP_WHATSAPP_NUMBER ? (
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
-                >
-                  Enviar Mensagem no WhatsApp
-                </a>
-              ) : (
-                <p className="text-red-600">O WhatsApp não está disponível.</p>
-              )}
-            </div>
+          <div className="mt-4">
+            <Slider {...settings}>
+              {imageList.map((img, index) => (
+                <div key={index} className="px-2">
+                  <img
+                    src={img}
+                    alt={`Imagem - ${index + 1}`}
+                    className="w-full h-48 object-cover rounded-lg cursor-pointer transition-transform transform hover:scale-105"
+                    onClick={() => {
+                      setCurrentImageIndex(index);
+                      setIsModalOpen(true);
+                    }}
+                  />
+                </div>
+              ))}
+            </Slider>
           </div>
         </div>
 
-        <div className="mt-4">
-          <h2 className="text-gray-800 text-2xl font-bold">
-            Imagens do Imóvel
+        <div className="md:w-1/3 bg-white shadow-lg rounded-lg p-6 mt-6 md:mt-0">
+          <h2 className="text-3xl font-semibold text-gray-800">
+            {nome_imovel}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {imageList.map((img, index) => (
-              <img
-                key={index}
-                src={img}
-                alt={`Imóvel - ${index + 1}`}
-                className="w-full h-40 object-cover rounded-lg cursor-pointer transition-transform transform hover:scale-105"
-                onClick={() => handleOpen(index)}
-              />
-            ))}
+          <h3 className="text-2xl text-blue-600 mt-2">
+            {new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            }).format(valor_venda)}
+          </h3>
+          <p className="text-gray-700 mt-4">{descricao_imovel}</p>
+          <div className="my-4 flex items-center">
+            <FaBed className="text-gray-500 mr-2" />
+            <span>{quartos} Quartos</span>
           </div>
+          <div className="my-4 flex items-center">
+            <FaBath className="text-gray-500 mr-2" />
+            <span>{banheiro} Banheiros</span>
+          </div>
+          <div className="my-4">
+            <p className="text-gray-600">Localização: {localizacao}</p>
+          </div>
+          {process.env.REACT_APP_WHATSAPP_NUMBER ? (
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block bg-green-500 text-white px-5 py-3 rounded-lg hover:bg-green-600 transition"
+            >
+              <FaWhatsapp className="inline mr-2" /> Enviar Mensagem no WhatsApp
+            </a>
+          ) : (
+            <p className="mt-4 text-red-600">O WhatsApp não está disponível.</p>
+          )}
         </div>
+      </div>
 
-        {open && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-90 z-50">
-            <div className="bg-white rounded-lg p-4 relative max-w-3xl w-full mx-4">
-              <button onClick={handleClose} className="absolute top-2 right-2">
-                <span className="text-red-600 text-3xl">&times;</span>
-              </button>
-              <div className="flex flex-col sm:flex-row items-center justify-center">
-                <button
-                  onClick={handlePrev}
-                  className="p-3 text-blue-600 text-2xl hover:text-blue-800"
-                >
-                  &lt;
-                </button>
+      {/* Modal para a imagem ampliada */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        currentImage={imageList[currentImageIndex]}
+        setCurrentImage={setCurrentImageIndex}
+        imageList={imageList}
+      />
+
+      <div className="container mx-auto mt-8">
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Imóveis Semelhantes
+        </h2>
+        <Slider {...settingsSemelhantes}>
+          {imoveisSemelhantes.map((imovel) => (
+            <div key={imovel.id} className="px-2">
+              <Link to={`/imovel/${imovel.id}`}>
                 <img
-                  src={imageList[currentImageIndex]}
-                  alt={`Imagem Ampliada ${currentImageIndex + 1}`}
-                  className="max-w-full max-h-[80vh] object-contain mx-4 my-4"
+                  src={`${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`}
+                  alt={imovel.nome_imovel}
+                  className="w-full h-48 object-cover rounded-lg cursor-pointer transition-transform transform hover:scale-105"
                 />
-                <button
-                  onClick={handleNext}
-                  className="p-3 text-blue-600 text-2xl hover:text-blue-800"
-                >
-                  &gt;
-                </button>
-              </div>
+                <h3 className="mt-2 text-xl font-medium text-gray-800">
+                  {imovel.nome_imovel}
+                </h3>
+                <p className="text-blue-600">
+                  {new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  }).format(imovel.valor_venda)}
+                </p>
+              </Link>
             </div>
-          </div>
-        )}
+          ))}
+        </Slider>
       </div>
     </div>
   );

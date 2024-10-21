@@ -155,7 +155,7 @@ router.get('/', async (req, res) => {
 
 router.get('/imoveis', async (req, res) => {
   try {
-    const { categoria, localizacao } = req.query; // Extraindo parâmetros da consulta
+    const { categoria, localizacao, busca } = req.query; // Extraindo parâmetros da consulta
 
     // Filtros a serem aplicados
     const filters = {};
@@ -167,6 +167,21 @@ router.get('/imoveis', async (req, res) => {
 
     if (localizacao) {
       filters.localizacao = localizacao; // Filtro por localização
+    }
+
+    // Se houver um parâmetro de busca, incluir na consulta
+    if (busca) {
+      // Normaliza a string de busca
+      const normalizedBusca = removeAcentos(busca.toLowerCase());
+      // Adiciona filtro de busca
+      filters[Op.or] = [
+        { nome_imovel: { [Op.like]: `%${normalizedBusca}%` } },
+        { descricao_imovel: { [Op.like]: `%${normalizedBusca}%` } },
+        { endereco: { [Op.like]: `%${normalizedBusca}%` } },
+        { tags: { [Op.like]: `%${normalizedBusca}%` } },
+        { localizacao: { [Op.like]: `%${normalizedBusca}%` } },
+        { observacoes: { [Op.like]: `%${normalizedBusca}%` } },
+      ];
     }
 
     // Buscando imóveis com os filtros aplicados
@@ -222,8 +237,11 @@ router.get('/busca', async (req, res) => {
 
 // Rota para adicionar um imóvel
 router.post('/', uploadFields, async (req, res) => {
-  
   try {
+    // Converta o campo 'exclusivo' para um valor numérico (1 para sim, 0 para não)
+    const exclusivo = req.body.exclusivo === 'sim' ? 1 : 0;
+    const tem_inquilino = req.body.tem_inquilino === 'sim' ? 1 : 0;
+
     // Criação do imóvel
     const novoImovel = await db.Imovel.create({
       nome_imovel: req.body.nome_imovel,
@@ -239,8 +257,8 @@ router.post('/', uploadFields, async (req, res) => {
       imagens: req.body.imagens,
       imagem_capa: req.body.imagem_capa,
       localizacao: req.body.localizacao,
-      exclusivo: req.body.exclusivo,
-      tem_inquilino: req.body.tem_inquilino,
+      exclusivo: exclusivo, // Aqui usa o valor numérico
+      tem_inquilino: tem_inquilino, // Aqui usa o valor numérico
       situacao_imovel: req.body.situacao_imovel,
       observacoes: req.body.observacoes,
     });
@@ -260,9 +278,11 @@ router.post('/', uploadFields, async (req, res) => {
     console.error('Erro ao criar imóvel:', error);
     res.status(500).json({ error: 'Erro ao criar imóvel' });
   }
+  
   console.log(req.body); // Logs dos campos de texto
-  console.log(req.files);
+  console.log(req.files); // Logs dos arquivos enviados
 });
+
 
 // Rota para excluir um imóvel
 router.delete('/:id', async (req, res) => {
@@ -386,6 +406,34 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar imóvel:', error);
     res.status(500).json({ success: false, error: 'Erro ao buscar imóvel' });
+  }
+});
+
+// Rota para buscar imóveis semelhantes
+router.get('/:id/semelhantes', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Busca o imóvel específico para obter a localização
+    const imovel = await db.Imovel.findByPk(id);
+    if (!imovel) {
+      return res.status(404).json({ error: 'Imóvel não encontrado' });
+    }
+
+    // Busca imóveis com a mesma localização, excluindo o imóvel atual
+    const semelhantes = await db.Imovel.findAll({
+      where: {
+        localizacao: imovel.localizacao,
+        id: {
+          [Op.ne]: id // Exclui o próprio imóvel da lista
+        }
+      }
+    });
+
+    res.status(200).json(semelhantes);
+  } catch (error) {
+    console.error('Erro ao buscar imóveis semelhantes:', error);
+    res.status(500).json({ error: 'Erro ao buscar imóveis semelhantes' });
   }
 });
 

@@ -10,19 +10,19 @@ const Top5Corretores = ({ corretores }) => {
   return (
     <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
       <ul className="space-y-4">
-        {corretores.map((corretor) => (
+        {corretores.map((corretor, index) => (
           <li
-            key={corretor.corretor.id}
+            key={corretor.corretor.id || index} // Fallback to index if id is not available
             className="flex items-center space-x-4 bg-gray-700 p-4 rounded-lg"
           >
             <img
               src={`${API_URL}/uploads/imagem_corretor/${corretor.corretor.photo}`}
-              alt={`${corretor.corretor.first_name} ${corretor.corretor.last_name}`}
+              alt={`${corretor.first_name} ${corretor.corretor.last_name}`}
               className="h-16 w-16 rounded-full"
             />
             <div>
               <span className="text-xl font-semibold">
-                {corretor.corretor.first_name} {corretor.corretor.last_name}
+                {corretor.first_name} {corretor.corretor.last_name}
               </span>
               <p className="text-gray-400">{corretor.clients} clientes</p>
             </div>
