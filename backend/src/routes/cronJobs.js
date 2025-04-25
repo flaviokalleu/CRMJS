@@ -2,8 +2,8 @@ const cron = require('node-cron');
 const moment = require('moment');
 const { Lembrete, ClienteAluguel } = require('../models'); // Ajuste conforme necessário
 const { client, isAuthenticated } = require('./whatsappRoutes');
-require('dotenv').config(); // Carrega variáveis do .env
-const performBackup = require('../utils/backup'); // Ajuste o caminho se necessário
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') }); // Carrega .env
+const { backupDatabase } = require('../utils/backup'); // Corrigido para importar backupDatabase
 
 const defaultPhoneNumber = process.env.DEFAULT_PHONE_NUMBER; // Número padrão do telefone
 
@@ -32,10 +32,10 @@ const verificarLembretesParaNotificacao = async () => {
       return;
     }
 
-    lembretes.forEach(async (lembrete) => {
-      if (lembrete.status === "concluido") return;
+    for (const lembrete of lembretes) { // Usar loop síncrono para evitar concorrência
+      if (lembrete.status === 'concluido') continue;
 
-      const lembreteData = moment(lembrete.data).tz("America/Sao_Paulo");
+      const lembreteData = moment(lembrete.data).tz('America/Sao_Paulo');
       const diffMinutes = lembreteData.diff(now, 'minutes');
 
       if (diffMinutes === 15) {
@@ -49,7 +49,7 @@ const verificarLembretesParaNotificacao = async () => {
           console.error('Cliente WhatsApp não está pronto.');
         }
       }
-    });
+    }
   } catch (error) {
     console.error('Erro ao verificar lembretes:', error);
   }
@@ -67,7 +67,7 @@ const verificarVencimentosParaNotificacao = async () => {
 
       if (diffDays === 3) {
         if (client && isAuthenticated) {
-          const destinatario = cliente.telefone || defaultPhoneNumber; // Use o telefone do cliente
+          const destinatario = cliente.telefone || defaultPhoneNumber;
           const message = `Olá tudo bem? ${cliente.nome} seu aluguel vence em 3 dias. Por favor não esqueça de enviar seu pagamento`;
 
           await client.sendMessage(`55${destinatario}@c.us`, message);
@@ -85,20 +85,32 @@ const verificarVencimentosParaNotificacao = async () => {
 // Inicia o cron job
 const startCronJobs = async () => {
   // Executa backup imediatamente ao iniciar
-  await performBackup();
+  try {
+    await backupDatabase(); // Corrigido para backupDatabase
+    console.log('Initial backup completed');
+  } catch (error) {
+    console.error('Initial backup failed:', error);
+  }
 
   // Cron job para executar a cada 5 minutos
-  cron.schedule('*/5 * * * *', () => {
+  cron.schedule('*/5 * * * *', async () => {
     console.log('Executando cron job a cada 5 minutos...');
-    verificarLembretesParaNotificacao();
-    verificarVencimentosParaNotificacao(); // Adiciona verificação de vencimentos
+    await verificarLembretesParaNotificacao();
+    await verificarVencimentosParaNotificacao();
   });
 
   // Cron job para realizar backup a cada 6 horas
   cron.schedule('0 */6 * * *', async () => {
     console.log('Executando backup a cada 6 horas...');
-    await performBackup(); // Chama a função de backup
+    try {
+      await backupDatabase(); // Corrigido para backupDatabase
+      console.log('Scheduled backup completed');
+    } catch (error) {
+      console.error('Scheduled backup failed:', error);
+    }
   });
+
+  console.log('Cron jobs scheduled');
 };
 
 module.exports = startCronJobs;

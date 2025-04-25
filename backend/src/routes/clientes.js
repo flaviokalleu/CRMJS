@@ -23,7 +23,8 @@ const convertToJpeg = async (inputPath, outputPath) => {
   }
 };
 
-const uploadDir = process.env.UPLOAD_DIR;
+const uploadDir = path.resolve(__dirname, '../Uploads'); // Resolve para backend/Uploads
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

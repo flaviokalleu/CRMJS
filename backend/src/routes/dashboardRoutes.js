@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const { Corretor, Cliente, Correspondente } = require('../models');
-const { Op, fn, col } = require('sequelize');
+const Sequelize = require('sequelize');
+const { Op, fn, col } = Sequelize;
+const literal = Sequelize.literal;
 
 // Middleware de autenticação
 router.use(authMiddleware);
@@ -33,7 +35,7 @@ router.get('/', async (req, res) => {
         const clientesEsteMes = await Cliente.count({
             where: {
                 ...whereCondition,
-                createdAt: {
+                created_at: {
                     [Op.gte]: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
                 },
             },
@@ -119,8 +121,8 @@ router.get('/monthly', async (req, res) => {
         // Obter o número de clientes cadastrados por mês
         const monthlyClients = await Cliente.findAll({
             attributes: [
-                [fn('MONTH', col('created_at')), 'month'],
-                [fn('YEAR', col('created_at')), 'year'],
+                [literal('EXTRACT(MONTH FROM "created_at")'), 'month'],
+                [literal('EXTRACT(YEAR FROM "created_at")'), 'year'],
                 [fn('COUNT', col('id')), 'count']
             ],
             where: {
@@ -129,14 +131,18 @@ router.get('/monthly', async (req, res) => {
                     [Op.gte]: new Date(new Date().getFullYear(), 0, 1), // Início do ano atual
                 },
             },
-            group: ['year', 'month'],
-            order: [[fn('YEAR', col('created_at')), 'ASC'], [fn('MONTH', col('created_at')), 'ASC']]
+            group: [literal('EXTRACT(YEAR FROM "created_at")'), literal('EXTRACT(MONTH FROM "created_at")')],
+            order: [
+                [literal('EXTRACT(YEAR FROM "created_at")'), 'ASC'],
+                [literal('EXTRACT(MONTH FROM "created_at")'), 'ASC']
+            ]
         });
 
+        // Inicializar array para os 12 meses do ano
         const monthlyData = Array(12).fill(0);
         monthlyClients.forEach(client => {
-            const month = client.get('month') - 1; // Subtrair 1 para ajustar ao índice do array
-            monthlyData[month] = client.get('count');
+            const month = parseInt(client.get('month')) - 1; // Ajustar para índice do array (0-11)
+            monthlyData[month] = parseInt(client.get('count')); // Garantir que count é um número
         });
 
         res.json({ monthlyData });
@@ -160,23 +166,24 @@ router.get('/weekly', async (req, res) => {
         // Obter o número de clientes cadastrados por dia da semana
         const weeklyClients = await Cliente.findAll({
             attributes: [
-                [fn('DAYOFWEEK', col('created_at')), 'dayOfWeek'],
+                [literal('EXTRACT(DOW FROM "created_at")'), 'dayOfWeek'],
                 [fn('COUNT', col('id')), 'count']
             ],
             where: {
                 ...whereCondition,
                 created_at: {
-                    [Op.gte]: new Date(new Date() - 7 * 24 * 60 * 60 * 1000),
+                    [Op.gte]: new Date(new Date() - 7 * 24 * 60 * 60 * 1000), // Últimos 7 dias
                 },
             },
-            group: ['dayOfWeek'],
-            order: [['dayOfWeek', 'ASC']]
+            group: [literal('EXTRACT(DOW FROM "created_at")')],
+            order: [[literal('EXTRACT(DOW FROM "created_at")'), 'ASC']]
         });
 
+        // Inicializar array para os 7 dias da semana (0 = Domingo, 6 = Sábado)
         const weeklyData = Array(7).fill(0);
         weeklyClients.forEach(client => {
-            const day = client.get('dayOfWeek') - 1;
-            weeklyData[day] = client.get('count');
+            const day = parseInt(client.get('dayOfWeek')); // DOW retorna 0 (Domingo) a 6 (Sábado)
+            weeklyData[day] = parseInt(client.get('count')); // Garantir que count é um número
         });
 
         res.json({ weeklyData });

@@ -5,60 +5,44 @@ module.exports = {
     await queryInterface.createTable('acessos', {
       id: {
         type: Sequelize.INTEGER,
-        autoIncrement: true,
         primaryKey: true,
-        allowNull: false
+        autoIncrement: true
       },
       ip: {
-        type: Sequelize.STRING,
-        allowNull: false,
+        type: Sequelize.STRING(255),
+        allowNull: false
       },
       referer: {
-        type: Sequelize.STRING,
-        allowNull: true,
+        type: Sequelize.STRING(255)
       },
       userAgent: {
-        type: Sequelize.STRING,
-        allowNull: true,
+        type: Sequelize.STRING(255)
       },
       timestamp: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW,
+        type: Sequelize.DATE
       },
       corretorId: {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'corretores', // Nome da tabela referenciada
-          key: 'id' // Chave primária da tabela referenciada
-        }
+        references: { model: 'corretores', key: 'id' }
       },
       correspondenteId: {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'correspondents', // Nome da tabela referenciada
-          key: 'id' // Chave primária da tabela referenciada
-        }
+        references: { model: 'correspondents', key: 'id' }
       },
       administradorId: {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'administradors', // Nome da tabela referenciada
-          key: 'id' // Chave primária da tabela referenciada
-        }
+        references: { model: 'administradors', key: 'id' }
       },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+        defaultValue: Sequelize.NOW
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
-      },
+        defaultValue: Sequelize.NOW
+      }
     });
   },
 

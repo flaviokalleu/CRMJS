@@ -24,64 +24,50 @@ const whatsappRoutes = require('./routes/whatsappRoutes');
 const lembreteRoutes = require('./routes/lembreteRoutes');
 const acessosRoutes = require('./routes/acessos');
 const clienteAluguelRoutes = require('./routes/clienteAluguel');
-const { checkKey, releaseKey } = require('./middleware/checkKeyMiddleware');
 const requestIp = require('request-ip');
-const Sequelize = require('sequelize');
-const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USERNAME, process.env.DB_PASSWORD, {
-    host: process.env.DB_HOST,
-    dialect: 'mysql',
-    logging: false, // desativa logs
-});
 
-// Importar e iniciar os cron jobs
+// Importar o db configurado
+const db = require('./config/database');
+
 const startCronJobs = require('./routes/cronJobs');
-
 
 const app = express();
 app.use(requestIp.mw());
 app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true}));
 
-let isKeyValid = true; // Variável para armazenar a validade da chave
-
-// Função para validar a chave antes de iniciar o servidor
+// Função para iniciar o servidor
 const startServer = async () => {
-    isKeyValid = await checkKey(); // Verifica a chave uma vez ao iniciar
-    if (!isKeyValid) {
-        console.error('Key is invalid. Server will not start.');
-        process.exit(1); // Sai do processo se a chave for inválida
+  const PORT = process.env.PORT || 8000;
+
+  try {
+    // Verificar se db.sequelize está definido
+    if (!db.sequelize) {
+      throw new Error('Sequelize instance is not defined in database configuration');
     }
 
-    const PORT = process.env.PORT || 8000;
+    // Testar conexão com o banco de dados
+    await db.sequelize.authenticate();
+    console.log('Database connection has been established successfully.');
 
-    app.listen(PORT, async () => {
-        console.log(`Server is running on port ${PORT}`);
+    // Sincronizar modelos
+    await db.sequelize.sync({ alter: true }); // Use alter: true para ajustar tabelas existentes
+    console.log('Models synchronized with the database');
 
-        try {
-            await sequelize.authenticate();
-            console.log('Database connection has been established successfully.');
-            await sequelize.sync();
-            console.log('Models synchronized with the database');
-        } catch (error) {
-            console.error('Unable to connect to the database:', error);
-        }
-
-        // Iniciar os cron jobs quando o servidor iniciar
-        startCronJobs();
+    // Iniciar o servidor
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      startCronJobs();
     });
-};
-
-// Middleware para verificar se a chave é válida nas rotas protegidas
-const keyMiddleware = (req, res, next) => {
-    if (!isKeyValid) {
-        return res.status(403).json({ message: 'Key is invalid or not in use.' });
-    }
-    next(); // Chave válida, continua para a próxima middleware ou rota
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1); // Encerra o processo se a conexão falhar
+  }
 };
 
 // Definindo as rotas
-app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, '../Uploads')));
 app.use('/api', configurationsRoute);
 app.use('/api', clienteRoutes);
 app.use('/api', reportRoutes);
@@ -100,21 +86,17 @@ app.use('/api/correspondente', correspondenteRoutes);
 app.use('/api/listadecorretores', listadecorretores);
 app.use('/api', notasRouter);
 app.use('/api', lembreteRoutes);
-app.use('/api', whatsappRoutes);
+//app.use('/api', whatsappRoutes);
 app.use('/api/acessos', acessosRoutes);
 app.use('/api', clienteAluguelRoutes);
 
-// Adiciona o middleware de verificação de chave nas rotas que precisam
-app.use('/api', keyMiddleware); // Aplica o middleware nas rotas com prefixo /api
-
-// Adiciona o releaseKey ao shutdown da aplicação
-process.on('SIGINT', async () => {
-    console.log('Liberando a chave antes de sair...');
-    await releaseKey();
-    process.exit();
+// Manipulação de erros globais
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Iniciar o servidor
 startServer();
 
-module.exports = sequelize;
+module.exports = db.sequelize;

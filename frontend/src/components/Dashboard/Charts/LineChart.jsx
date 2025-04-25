@@ -92,7 +92,7 @@ const LineChart = ({ data }) => {
   };
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+    <div className="bg-black p-6 rounded-lg shadow-lg">
       <Line data={chartData} options={options} />
     </div>
   );

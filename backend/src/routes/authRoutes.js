@@ -11,13 +11,15 @@ const argon2 = require('argon2');
 
 const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your_jwt_secret_key';
 const REFRESH_SECRET_KEY = process.env.JWT_REFRESH_SECRET_KEY || 'your_jwt_refresh_secret_key';
-const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'; // Diretório de upload
+
+// Definir o diretório de upload como backend/Uploads
+const UPLOAD_DIR = path.resolve(__dirname, '../Uploads'); // Resolve para backend/Uploads
 
 // Configuração do multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const userRole = req.user.role.toLowerCase(); // Obtem o papel do usuário
-    const dir = path.join(UPLOAD_DIR, `imagem_${userRole}`); // Define o diretório baseado na função do usuário
+    const userRole = req.user.role.toLowerCase(); // Obtém o papel do usuário
+    const dir = path.join(UPLOAD_DIR, `imagem_${userRole}`); // Subdiretório baseado no papel
 
     // Verifica se o diretório existe; caso contrário, cria
     if (!fs.existsSync(dir)) {
@@ -27,7 +29,7 @@ const storage = multer.diskStorage({
     cb(null, dir); // Define o diretório de destino
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Nome do arquivo com timestamp
+    cb(null, `${Date.now()}${path.extname(file.originalname)}`); // Nome do arquivo com timestamp
   },
 });
 
@@ -130,7 +132,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-
 // Rota para refresh de token
 router.post('/refresh-token', async (req, res) => {
   const { refreshToken } = req.body;
@@ -217,14 +218,14 @@ router.put('/users/:email', authenticateToken, upload.single('photo'), async (re
       creci,
       address,
       pix_account,
-      photo: req.file ? req.file.filename : user.photo,
+      photo: req.file ? path.join(`imagem_${user.role.toLowerCase()}`, req.file.filename) : user.photo,
     });
 
     // Atualiza a senha se for fornecida
     if (password) {
       // Converte a nova senha para Base64
-      user.password = Buffer.from(password).toString('base64'); // Atualiza a senha em Base64
-      await user.save(); // Salva as alterações no usuário após atualizar a senha
+      user.password = Buffer.from(password).toString('base64');
+      await user.save();
     }
 
     return res.json({ message: 'Informações do usuário atualizadas com sucesso' });
@@ -242,7 +243,6 @@ router.post('/logout', authenticateToken, async (req, res) => {
   if (!token) return res.status(401).json({ message: 'Token não fornecido' });
 
   try {
-    // Remover o token da tabela de tokens
     await Token.destroy({ where: { token } });
     return res.json({ message: 'Logout realizado com sucesso' });
   } catch (error) {
