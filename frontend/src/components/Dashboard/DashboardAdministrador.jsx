@@ -7,9 +7,9 @@ import {
   FaSpinner,
   FaExclamationTriangle,
   FaChartLine,
-  FaChartBar
+  FaChartBar,
 } from "react-icons/fa";
-
+import { motion } from "framer-motion";
 import LineChart from "./Charts/LineChart";
 import BarChart from "./Charts/BarChart";
 import DashboardCard from "../DashboardCard";
@@ -30,7 +30,7 @@ const DashboardAdministrador = () => {
     weekly: { labels: [], datasets: [] }
   });
   
-  const [activeChart, setActiveChart] = useState("monthly"); // "monthly" ou "weekly"
+  const [activeChart, setActiveChart] = useState("monthly");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -48,7 +48,6 @@ const DashboardAdministrador = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch main dashboard data
         const mainData = await fetchData(
           `${process.env.REACT_APP_API_URL}/dashboard`
         );
@@ -62,29 +61,24 @@ const DashboardAdministrador = () => {
           top5Corretores: mainData.top5Corretores || []
         });
 
-        // Fetch monthly data
         const monthlyData = await fetchData(
           `${process.env.REACT_APP_API_URL}/dashboard/monthly`
         );
         
-        // Fetch weekly data
         const weeklyData = await fetchData(
           `${process.env.REACT_APP_API_URL}/dashboard/weekly`
         );
         
-        // Fetch clients awaiting approval
         const clientesAguardando = await fetchData(
           `${process.env.REACT_APP_API_URL}/clientes?status=aguardando_aprovacao`
         );
         
-        // Update dashboard data with awaiting clients
         setDashboardData(prev => ({
           ...prev,
           clientesAguardandoAprovacao: clientesAguardando || [],
           totalClientesAguardandoAprovacao: clientesAguardando.length || 0
         }));
         
-        // Set chart data with gold theme
         setChartData({
           monthly: {
             labels: [
@@ -127,12 +121,10 @@ const DashboardAdministrador = () => {
     fetchDashboardData();
   }, []);
 
-  // Toggle between monthly and weekly charts
   const toggleChartView = () => {
     setActiveChart(activeChart === "monthly" ? "weekly" : "monthly");
   };
 
-  // Destructure for easier access
   const {
     totalCorretores,
     totalClientes,
@@ -144,7 +136,7 @@ const DashboardAdministrador = () => {
 
   if (loading) {
     return (
-      <div className="bg-black min-h-screen flex items-center justify-center">
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <FaSpinner className="animate-spin h-12 w-12 mx-auto text-blue-600 mb-4" />
           <p className="text-xl font-medium text-blue-500">Carregando dados do dashboard...</p>
@@ -155,8 +147,8 @@ const DashboardAdministrador = () => {
 
   if (error) {
     return (
-      <div className="bg-black min-h-screen flex items-center justify-center">
-        <div className="bg-black p-8 rounded-lg shadow-lg max-w-lg w-full border border-blue-700">
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center">
+        <div className="bg-gray-800 p-8 rounded-lg shadow-lg max-w-lg w-full border border-blue-700">
           <FaExclamationTriangle className="h-12 w-12 mx-auto text-blue-600 mb-4" />
           <h2 className="text-xl font-bold text-blue-500 text-center mb-2">Erro</h2>
           <p className="text-blue-200 text-center">{error}</p>
@@ -166,152 +158,158 @@ const DashboardAdministrador = () => {
   }
 
   return (
-    <div className="bg-black min-h-screen p-4 md:p-6">
+    <div className="bg-gray-900 min-h-screen p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-blue-500 mb-8 text-center border-b border-blue-900 pb-4">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-bold text-blue-500 mb-8 text-center border-b border-blue-900 pb-4"
+        >
           Dashboard Administrador
-        </h1>
+        </motion.h1>
         
-        {/* Dashboard Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-          <DashboardCard 
-            title="Total Corretores" 
-            value={totalCorretores}
-            className="black border border-blue-800 shadow-lg hover:border-blue-600"
-            titleClass="text-blue-500"
-            valueClass="text-blue-400"
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
           >
-            <FaUsersCog className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />
-          </DashboardCard>
+            <DashboardCard 
+              title="Total Corretores" 
+              value={totalCorretores}
+              icon={<FaUsersCog className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />}
+            />
+          </motion.div>
           
-          <DashboardCard 
-            title="Total Clientes" 
-            value={totalClientes}
-            className="black border border-blue-800 shadow-lg hover:border-blue-600"
-            titleClass="text-blue-500"
-            valueClass="text-blue-400"
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            <FaUserFriends className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />
-          </DashboardCard>
-          
-          <DashboardCard 
-            title="Total Correspondentes" 
-            value={totalCorrespondentes}
-            className="black border border-blue-800 shadow-lg hover:border-blue-600"
-            titleClass="text-blue-500"
-            valueClass="text-blue-400"
+            <DashboardCard 
+              title="Total Clientes" 
+              value={totalClientes}
+              icon={<FaUserFriends className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
           >
-            <FaClipboardList className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />
-          </DashboardCard>
-          
-          <DashboardCard 
-            title="Aguardando Aprovação" 
-            value={totalClientesAguardandoAprovacao}
-            className="black border border-blue-800 shadow-lg hover:border-blue-600"
-            titleClass="text-blue-500"
-            valueClass="text-blue-400"
+            <DashboardCard 
+              title="Total Correspondentes" 
+              value={totalCorrespondentes}
+              icon={<FaClipboardList className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
           >
-            <FaUserPlus className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />
-          </DashboardCard>
+            <DashboardCard 
+              title="Aguardando Aprovação" 
+              value={totalClientesAguardandoAprovacao}
+              icon={<FaUserPlus className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />}
+            />
+          </motion.div>
         </div>
-        
-        {/* Single Chart Section with Toggle Button */}
-        <div className="black p-4 md:p-6 rounded-lg shadow-lg transition-all hover:shadow-xl border border-blue-900 hover:border-blue-700 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-blue-500 flex items-center">
-              <span className="mr-2">{activeChart === "monthly" ? "📈" : "📊"}</span> 
-              {activeChart === "monthly" ? "Clientes Mensais" : "Clientes Semanais"}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg"
+          >
+            <h2 className="text-xl md:text-2xl font-bold text-blue-500 mb-4">
+              Clientes Mensais
             </h2>
-            
-            <button 
-              onClick={toggleChartView}
-              className="flex items-center bg-blue-700 hover:bg-blue-600 text-black px-4 py-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {activeChart === "monthly" ? (
-                <>
-                  <FaChartBar className="mr-2" />
-                  <span>Ver Semanal</span>
-                </>
-              ) : (
-                <>
-                  <FaChartLine className="mr-2" />
-                  <span>Ver Mensal</span>
-                </>
-              )}
-            </button>
-          </div>
-          
-          <div className="bg-black p-4 rounded-lg border border-blue-900">
-            {activeChart === "monthly" ? (
-              chartData.monthly.labels.length > 0 && chartData.monthly.datasets.length > 0 ? (
-                <LineChart data={chartData.monthly} />
-              ) : (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-blue-400">Dados mensais não disponíveis</p>
-                </div>
-              )
+            {chartData.monthly.labels.length > 0 ? (
+              <LineChart data={chartData.monthly} />
             ) : (
-              chartData.weekly.labels.length > 0 && chartData.weekly.datasets.length > 0 ? (
-                <BarChart data={chartData.weekly} />
-              ) : (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-blue-400">Dados semanais não disponíveis</p>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-        
-        {/* Top 5 Corretores Section */}
-        <div className="black p-4 md:p-6 rounded-lg shadow-lg mb-8 transition-all hover:shadow-xl border border-blue-900 hover:border-blue-700">
-          <h2 className="text-xl md:text-2xl font-bold text-blue-500 mb-4 flex items-center">
-            <span className="mr-2">🏆</span> Top 5 Corretores
-          </h2>
-          <div className="bg-black p-4 rounded-lg border border-blue-900">
-            <Top5Corretores corretores={top5Corretores} />
-          </div>
-        </div>
-        
-        {/* Clientes Aguardando Aprovação Section */}
-        <div className="black p-4 md:p-6 rounded-lg shadow-lg transition-all hover:shadow-xl border border-blue-900 hover:border-blue-700">
-          <h2 className="text-xl md:text-2xl font-bold text-blue-500 mb-4 flex items-center">
-            <span className="mr-2">⏳</span> Clientes Aguardando Aprovação
-          </h2>
-          <div className="bg-black p-4 rounded-lg overflow-x-auto border border-blue-900">
-            {clientesAguardandoAprovacao.length > 0 ? (
-              <table className="min-w-full divide-y divide-blue-900">
-                <thead className="black">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-blue-500 uppercase tracking-wider">
-                      Nome
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-blue-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-blue-900">
-                  {clientesAguardandoAprovacao.map((cliente) => (
-                    <tr key={cliente.id} className="hover:bg-gray-700 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-100">
-                        {cliente.nome}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <button className="bg-blue-700 hover:bg-blue-600 text-black text-sm font-medium py-2 px-4 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                          Aguardando Aprovação
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="flex items-center justify-center py-8">
-                <p className="text-blue-400">Nenhum cliente aguardando aprovação</p>
+              <div className="flex items-center justify-center h-64">
+                <p className="text-gray-400">Dados não disponíveis</p>
               </div>
             )}
-          </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg"
+          >
+            <h2 className="text-xl md:text-2xl font-bold text-blue-500 mb-4">
+              Clientes Semanais
+            </h2>
+            {chartData.weekly.labels.length > 0 ? (
+              <BarChart data={chartData.weekly} />
+            ) : (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-gray-400">Dados não disponíveis</p>
+              </div>
+            )}
+          </motion.div>
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg mb-8"
+        >
+          <h2 className="text-xl md:text-2xl font-bold text-blue-500 mb-4">
+            Top 5 Corretores
+          </h2>
+          <Top5Corretores corretores={top5Corretores} />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg"
+        >
+          <h2 className="text-xl md:text-2xl font-bold text-blue-500 mb-4">
+            Clientes Aguardando Aprovação
+          </h2>
+          {clientesAguardandoAprovacao.length > 0 ? (
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Nome
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {clientesAguardandoAprovacao.map((cliente) => (
+                  <tr key={cliente.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {cliente.nome}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                      <span className="px-3 py-1 rounded-full text-sm bg-yellow-200 text-yellow-800">
+                        Aguardando
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-gray-400 text-center py-4">
+              Nenhum cliente aguardando aprovação
+            </p>
+          )}
+        </motion.div>
       </div>
     </div>
   );
