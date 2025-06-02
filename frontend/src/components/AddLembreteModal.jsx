@@ -16,7 +16,6 @@ const AddLembreteModal = ({
     if (currentLembrete) {
       setTitulo(currentLembrete.titulo);
       setDescricao(currentLembrete.descricao);
-      // Formata a data para datetime-local, sempre em UTC-3
       const localDate = toZonedTime(currentLembrete.data, "America/Sao_Paulo");
       setDataHora(format(localDate, "yyyy-MM-dd'T'HH:mm"));
     } else {
@@ -28,18 +27,14 @@ const AddLembreteModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Converte data e hora para UTC para salvar no servidor
-    const dataHoraUTC = toZonedTime(dataHora, "America/Sao_Paulo"); // Converte para o horário de Brasília
+    const dataHoraUTC = toZonedTime(dataHora, "America/Sao_Paulo");
     const lembreteData = {
       titulo,
       descricao,
-      // Armazena como UTC, considerando que toZonedTime não altera o formato
       data: dataHoraUTC.toISOString(),
     };
 
     if (currentLembrete) {
-      // Atualizar lembrete existente
       const response = await fetch(
         `${API_URL}/lembretes/${currentLembrete.id}`,
         {
@@ -53,7 +48,6 @@ const AddLembreteModal = ({
       const updatedLembrete = await response.json();
       onAddLembrete(updatedLembrete);
     } else {
-      // Criar novo lembrete
       const response = await fetch(`${API_URL}/lembretes`, {
         method: "POST",
         headers: {
@@ -64,28 +58,27 @@ const AddLembreteModal = ({
       const newLembrete = await response.json();
       onAddLembrete(newLembrete);
     }
-    onClose(); // Fecha o modal após adicionar/editar
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
-      <div className="relative p-4 w-full max-w-md">
-        {/* Modal content */}
-        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+    <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-60">
+      <div className="relative w-full max-w-md">
+        <div className="relative bg-gradient-to-br from-blue-900 via-blue-950 to-black rounded-2xl shadow-2xl border border-blue-900/40">
           {/* Modal header */}
-          <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="flex items-center justify-between p-5 border-b border-blue-900/40 rounded-t">
+            <h3 className="text-xl font-bold text-white">
               {currentLembrete ? "Editar Lembrete" : "Adicionar Lembrete"}
             </h3>
             <button
               type="button"
-              className="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+              className="text-blue-200 hover:bg-blue-900/40 hover:text-white rounded-lg text-sm w-8 h-8 flex justify-center items-center"
               onClick={onClose}
             >
               <svg
-                className="w-3 h-3"
+                className="w-4 h-4"
                 aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -103,12 +96,12 @@ const AddLembreteModal = ({
             </button>
           </div>
           {/* Modal body */}
-          <form className="p-4" onSubmit={handleSubmit}>
-            <div className="grid gap-4 mb-4">
-              <div className="col-span-2">
+          <form className="p-6" onSubmit={handleSubmit}>
+            <div className="grid gap-5">
+              <div>
                 <label
                   htmlFor="titulo"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  className="block mb-2 text-sm font-semibold text-white"
                 >
                   Título
                 </label>
@@ -117,32 +110,31 @@ const AddLembreteModal = ({
                   id="titulo"
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  className="bg-blue-900/60 border border-blue-800/40 text-white text-base rounded-lg focus:ring-blue-500 focus:border-blue-400 block w-full p-3 placeholder:text-white/60"
                   placeholder="Digite o título do lembrete"
                   required
                 />
               </div>
-              <div className="col-span-2">
+              <div>
                 <label
                   htmlFor="descricao"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  className="block mb-2 text-sm font-semibold text-white"
                 >
                   Descrição
                 </label>
-                <input
-                  type="text"
+                <textarea
                   id="descricao"
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  className="bg-blue-900/60 border border-blue-800/40 text-white text-base rounded-lg focus:ring-blue-500 focus:border-blue-400 block w-full p-3 placeholder:text-white/60 min-h-[60px]"
                   placeholder="Digite a descrição do lembrete"
                   required
                 />
               </div>
-              <div className="col-span-2">
+              <div>
                 <label
                   htmlFor="dataHora"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  className="block mb-2 text-sm font-semibold text-white"
                 >
                   Data e Hora
                 </label>
@@ -151,14 +143,14 @@ const AddLembreteModal = ({
                   id="dataHora"
                   value={dataHora}
                   onChange={(e) => setDataHora(e.target.value)}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  className="bg-blue-900/60 border border-blue-800/40 text-white text-base rounded-lg focus:ring-blue-500 focus:border-blue-400 block w-full p-3 placeholder:text-white/60"
                   required
                 />
               </div>
             </div>
             <button
               type="submit"
-              className="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+              className="mt-6 w-full p-3 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 font-bold text-lg shadow-lg transition-all duration-200 text-white"
             >
               {currentLembrete ? "Atualizar" : "Adicionar"}
             </button>

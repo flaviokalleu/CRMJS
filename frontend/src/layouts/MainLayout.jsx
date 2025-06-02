@@ -1,114 +1,81 @@
-import React, { useState } from "react";
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import Drawer from "@mui/material/Drawer";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import IconButton from "@mui/material/IconButton";
-import MenuIcon from "@mui/icons-material/Menu";
-import Typography from "@mui/material/Typography";
-import Box from "@mui/material/Box";
+import React, { useState, useEffect } from "react";
+import { FiMenu } from "react-icons/fi"; // Using Feather Icons
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 
 const MainLayout = ({ children }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Check if screen is mobile on mount and window resize
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+
+    return () => window.removeEventListener("resize", checkIsMobile);
+  }, []);
+
+  // Set initial sidebar state based on screen size
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  const handleDrawerClose = () => {
-    setSidebarOpen(false);
-  };
-
   return (
-    <Box
-      sx={{
-        display: "flex",
-        minHeight: "100vh",
-        bgcolor: "grey.900",
-        overflow: "hidden", // Prevent overflow at root level
-      }}
-    >
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-black">
       {/* Sidebar */}
-      <Drawer
-        variant={isMobile ? "temporary" : "permanent"}
-        open={sidebarOpen}
-        onClose={handleDrawerClose}
-        sx={{
-          width: 240,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: 240,
-            boxSizing: "border-box",
-            bgcolor: "grey.800",
-            color: "white",
-            borderRight: "1px solid",
-            borderColor: "grey.700",
-            overflowY: "auto", // Allow scrolling within sidebar if needed
-          },
-        }}
+      <aside
+        className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-gray-900/80 backdrop-blur-md 
+          transition-transform duration-300 ease-in-out border-r border-gray-800/50
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
-        <Sidebar open={sidebarOpen} handleDrawerClose={handleDrawerClose} />
-      </Drawer>
+        <Sidebar
+          open={sidebarOpen}
+          onClose={() => isMobile && setSidebarOpen(false)}
+        />
+      </aside>
 
-      {/* Main Content */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-          overflow: "hidden", // Prevent content overflow
-        }}
-      >
-        {/* AppBar */}
-        <AppBar
-          position="fixed"
-          sx={{
-            zIndex: theme.zIndex.drawer + 1,
-            bgcolor: "grey.900",
-            boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-            ...(isMobile && sidebarOpen && { display: "none" }),
-          }}
-        >
-          
-        </AppBar>
+      {/* Main Content Wrapper */}
+      <main className="flex-1 flex flex-col min-w-0 relative">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-md border-b border-gray-800/50">
+          <div className="">
+            <button
+              onClick={toggleSidebar}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-800/50 transition-colors"
+            >
+              <FiMenu className="h-6 w-6 text-gray-400" />
+            </button>
+          </div>
+        </header>
 
-        {/* Content Area */}
-        <Box
-          component="main"
-          
-        >
-          <Box
-            sx={{
-              flexGrow: 1, // Take up all available space
-              width: "100%", // Full width of parent
-              height: "100%", // Full height of parent
-              boxSizing: "border-box",
-              overflow: "auto", // Allow scrolling if content overflows
-            }}
-          >
-            {children}
-          </Box>
-        </Box>
+        {/* Content Area - Now expands properly */}
+        <div className="flex-1 w-full">
+          {/* Mobile Overlay */}
+          {isMobile && sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
+          {/* Main Content - Full width and height */}
+          <div className="h-full w-full">{children}</div>
+        </div>
 
         {/* Footer */}
-        <Box
-          sx={{
-            bgcolor: "grey.900",
-           
-            borderColor: "grey.700",
-            flexShrink: 0, // Prevent footer from shrinking
-          }}
-        >
+        <footer className="bg-gray-900/80 backdrop-blur-md border-t border-gray-800/50">
           <Footer />
-        </Box>
-      </Box>
-    </Box>
+        </footer>
+      </main>
+    </div>
   );
 };
 

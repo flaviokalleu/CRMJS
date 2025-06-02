@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import ModalEditarImovel from "./ModalEditarImovel"; // Importe o modal
-import { useAuth } from "../context/AuthContext"; // Importe o hook de autenticação
+import ModalEditarImovel from "./ModalEditarImovel";
+import { useAuth } from "../context/AuthContext";
+import { FaEdit, FaTrashAlt, FaDownload } from "react-icons/fa";
 
 const ListaImoveis = () => {
-  const { user } = useAuth(); // Obtém o usuário do contexto
+  const { user } = useAuth();
   const [imoveis, setImoveis] = useState([]);
   const [imovelSelecionado, setImovelSelecionado] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,7 +27,6 @@ const ListaImoveis = () => {
 
   const handleEdit = (imovel) => {
     if (user.role !== "corretor") {
-      // Permite editar apenas se o usuário não for corretor
       setImovelSelecionado(imovel);
       setIsModalOpen(true);
     }
@@ -34,7 +34,6 @@ const ListaImoveis = () => {
 
   const handleDelete = (id) => {
     if (user.role !== "corretor") {
-      // Permite deletar apenas se o usuário não for corretor
       axios
         .delete(`${process.env.REACT_APP_API_URL}/imoveis/${id}`)
         .then(() => {
@@ -62,46 +61,93 @@ const ListaImoveis = () => {
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">Lista de Imóveis</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-black py-8 px-2">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-10 text-center tracking-tight drop-shadow-lg">
+          Lista de Imóveis
+        </h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {imoveis.map((imovel) => (
             <div
               key={imovel.id}
-              className="bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300"
+              className="bg-blue-950/80 border border-blue-900/40 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 flex flex-col"
             >
               <img
                 src={`${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`}
                 alt={imovel.nome}
-                className="w-full h-48 object-cover rounded-lg mb-4"
+                className="w-full h-48 object-cover rounded-t-2xl"
               />
-              <h2 className="text-lg font-semibold mb-2">{imovel.nome}</h2>
-              <p className="text-gray-400 mb-4">{imovel.descricao}</p>
-              <div className="flex gap-2 justify-between">
-                {user &&
-                  user.role !== "corretor" && ( // Verifique se o usuário não é corretor
+              <div className="flex-1 flex flex-col p-5">
+                <h2 className="text-lg font-bold text-white mb-2 truncate">
+                  {imovel.nome}
+                </h2>
+                <p className="text-blue-100/90 text-sm mb-4 line-clamp-3">
+                  {imovel.descricao}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className="bg-blue-800/60 text-blue-100 px-2 py-1 rounded text-xs font-semibold">
+                    {imovel.tipo?.toUpperCase() || "TIPO"}
+                  </span>
+                  <span className="bg-blue-900/60 text-blue-100 px-2 py-1 rounded text-xs font-semibold">
+                    {imovel.localizacao}
+                  </span>
+                  <span className="bg-blue-900/60 text-blue-100 px-2 py-1 rounded text-xs font-semibold">
+                    {imovel.quartos} quarto(s)
+                  </span>
+                  <span className="bg-blue-900/60 text-blue-100 px-2 py-1 rounded text-xs font-semibold">
+                    {imovel.banheiro} banheiro(s)
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1 mb-4">
+                  <span className="text-blue-200 text-sm">
+                    Valor Avaliação:{" "}
+                    <span className="font-bold">
+                      {Number(imovel.valor_avaliacao).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </span>
+                  </span>
+                  <span className="text-blue-200 text-sm">
+                    Valor Venda:{" "}
+                    <span className="font-bold">
+                      {Number(imovel.valor_venda).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex gap-2 mt-auto">
+                  {user && user.role !== "corretor" && (
                     <>
                       <button
                         onClick={() => handleEdit(imovel)}
-                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                        className="flex items-center gap-1 bg-blue-700 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition"
+                        title="Editar"
                       >
-                        Editar
+                        <FaEdit />
+                        <span className="hidden sm:inline">Editar</span>
                       </button>
                       <button
                         onClick={() => handleDelete(imovel.id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                        className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition"
+                        title="Deletar"
                       >
-                        Deletar
+                        <FaTrashAlt />
+                        <span className="hidden sm:inline">Deletar</span>
                       </button>
                     </>
                   )}
-                <button
-                  onClick={() => handleDownload(imovel.id)}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                >
-                  Baixar
-                </button>
+                  <button
+                    onClick={() => handleDownload(imovel.id)}
+                    className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition"
+                    title="Baixar imagens"
+                  >
+                    <FaDownload />
+                    <span className="hidden sm:inline">Baixar</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}

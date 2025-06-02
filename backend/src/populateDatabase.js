@@ -10,7 +10,7 @@ const sequelize = new Sequelize(
   process.env.DB_PASSWORD, // Senha
   {
     host: process.env.DB_HOST, // Host do banco de dados
-    dialect: 'mysql', // Tipo de banco de dados
+    dialect: 'postgres', // Tipo de banco de dados
     logging: false,  // Defina como `true` se quiser ver os logs SQL
   }
 );

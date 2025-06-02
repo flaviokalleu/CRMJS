@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  HiMenu, 
-  HiChevronDown, 
-  HiChevronRight 
+import {
+  HiMenu,
+  HiChevronDown,
+  HiChevronRight,
 } from "react-icons/hi";
 import {
   FaHome,
@@ -239,12 +239,12 @@ const Sidebar = ({ open, handleDrawerClose }) => {
   const currentMenuItems = menuItems.find((menu) => menu.role === user?.role);
 
   // Elegant MenuItem component for consistent styling
-  const MenuItem = ({ to, icon, label, onClick, isDropdown = false }) => (
+  const MenuItem = ({ to, icon, label, onClick, isDropdown = false, openDropdown }) => (
     <li className="mb-1">
       {to ? (
         <Link
           to={to}
-          className="flex items-center px-4 py-3 text-sm transition-all duration-200 rounded-lg hover:bg-gray-900 text-gray-300 hover:text-blue-400"
+          className="flex items-center px-4 py-3 text-sm transition-all duration-200 rounded-lg hover:bg-blue-900/70 text-blue-100 hover:text-blue-400 font-medium"
         >
           <span className="text-blue-400">{icon}</span>
           <span className="ml-3">{label}</span>
@@ -252,7 +252,7 @@ const Sidebar = ({ open, handleDrawerClose }) => {
       ) : (
         <button
           onClick={onClick}
-          className="flex items-center justify-between w-full px-4 py-3 text-sm transition-all duration-200 rounded-lg hover:bg-gray-900 text-gray-300 hover:text-blue-400"
+          className="flex items-center justify-between w-full px-4 py-3 text-sm transition-all duration-200 rounded-lg hover:bg-blue-900/70 text-blue-100 hover:text-blue-400 font-medium"
         >
           <div className="flex items-center">
             <span className="text-blue-400">{icon}</span>
@@ -260,9 +260,7 @@ const Sidebar = ({ open, handleDrawerClose }) => {
           </div>
           {isDropdown && (
             <span className="text-blue-400">
-              {onClick === (() => setAddDropdownOpen(!addDropdownOpen)) && addDropdownOpen || 
-               onClick === (() => setListDropdownOpen(!listDropdownOpen)) && listDropdownOpen ? 
-                <HiChevronDown size={16} /> : <HiChevronRight size={16} />}
+              {openDropdown ? <HiChevronDown size={16} /> : <HiChevronRight size={16} />}
             </span>
           )}
         </button>
@@ -274,21 +272,21 @@ const Sidebar = ({ open, handleDrawerClose }) => {
     <>
       {/* Mobile Overlay */}
       {open && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 lg:hidden z-40"
           onClick={handleDrawerClose}
         />
       )}
-      
+
       {/* Sidebar */}
       <div
         className={`fixed inset-0 top-0 left-0 transition-transform transform ${
           open ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 bg-black text-white w-64 h-full z-50 overflow-y-auto shadow-xl border-r border-blue-900/30`}
+        } lg:translate-x-0 bg-gradient-to-b from-blue-950 via-blue-900 to-black text-white w-64 h-full z-50 overflow-y-auto shadow-2xl border-r border-blue-900/40`}
       >
         <div className="flex flex-col h-full">
           {/* Mobile Header */}
-          <div className="flex items-center justify-between p-4 bg-black border-b border-blue-900/30 lg:hidden">
+          <div className="flex items-center justify-between p-4 bg-blue-950 border-b border-blue-900/40 lg:hidden">
             <div className="text-blue-400 font-semibold text-lg">Imobiliária</div>
             <button
               onClick={handleDrawerClose}
@@ -297,117 +295,119 @@ const Sidebar = ({ open, handleDrawerClose }) => {
               <HiMenu size={24} />
             </button>
           </div>
-          
+
           {/* User Profile */}
-          <div className="flex items-center p-6 bg-black border-b border-blue-900/30">
+          <div className="flex items-center p-6 bg-blue-950 border-b border-blue-900/40">
             <div className="relative">
-              <div className="w-12 h-12 rounded-full border-2 border-blue-400 overflow-hidden">
+              <div className="w-12 h-12 rounded-full border-2 border-blue-400 overflow-hidden shadow-lg">
                 <img
                   src={
                     user?.photo
                       ? `${apiBaseUrl}/uploads/imagem_${user?.role}/${user.photo}`
-                      : "https://via.placeholder.com/150"
+                      : "https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=User"
                   }
                   alt="User"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-black"></div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-blue-950"></div>
             </div>
             <div className="ml-3">
-              <div className="font-medium text-blue-400">
-                {user?.first_name || "Nome do Usuário"}
+              <div className="font-semibold text-blue-300 text-base">
+                {user?.first_name || "Usuário"}
               </div>
-              <div className="text-xs text-gray-400">
-                {user?.role || "Função do Usuário"}
+              <div className="text-xs text-blue-200">
+                {user?.role || "Função"}
               </div>
-              <div className="text-xs text-gray-400 mt-1 flex items-center">
+              <div className="text-xs text-blue-400 mt-1 flex items-center">
                 <span className="mr-2">Token:</span>
-                <span className="bg-black border border-blue-400 text-blue-400 px-2 py-0.5 rounded text-xs font-mono">
+                <span className="bg-blue-950 border border-blue-400 text-blue-400 px-2 py-0.5 rounded text-xs font-mono">
                   {timeRemaining}
                 </span>
               </div>
             </div>
           </div>
-          
+
           {/* Navigation */}
           <nav className="mt-4 flex-1 px-2">
             <ul className="space-y-1">
               {/* Extra Items Section */}
               {currentMenuItems?.extraItems?.map((item, index) => (
-                <MenuItem 
-                  key={`extra-${index}`} 
-                  to={item.to} 
-                  icon={item.icon} 
-                  label={item.label} 
+                <MenuItem
+                  key={`extra-${index}`}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
                 />
               ))}
 
               {/* Divider */}
-              <li className="my-4 border-t border-blue-900/30"></li>
+              <li className="my-4 border-t border-blue-900/40"></li>
 
               {/* Add Section */}
-              <MenuItem 
-                icon={<FaUserPlus size={18} />} 
-                label="Adicionar" 
-                onClick={() => setAddDropdownOpen(!addDropdownOpen)} 
-                isDropdown={true} 
+              <MenuItem
+                icon={<FaUserPlus size={18} />}
+                label="Adicionar"
+                onClick={() => setAddDropdownOpen(!addDropdownOpen)}
+                isDropdown={true}
+                openDropdown={addDropdownOpen}
               />
-              
+
               {addDropdownOpen && (
-                <ul className="ml-4 mt-1 border-l border-blue-900/30 pl-2">
+                <ul className="ml-4 mt-1 border-l border-blue-900/40 pl-2">
                   {currentMenuItems?.addItems?.map((item, index) => (
-                    <MenuItem 
-                      key={`add-${index}`} 
-                      to={item.to} 
-                      icon={item.icon} 
-                      label={item.label} 
+                    <MenuItem
+                      key={`add-${index}`}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
                     />
                   ))}
                 </ul>
               )}
 
               {/* List Section */}
-              <MenuItem 
-                icon={<FaListAlt size={18} />} 
-                label="Lista" 
-                onClick={() => setListDropdownOpen(!listDropdownOpen)} 
-                isDropdown={true} 
+              <MenuItem
+                icon={<FaListAlt size={18} />}
+                label="Lista"
+                onClick={() => setListDropdownOpen(!listDropdownOpen)}
+                isDropdown={true}
+                openDropdown={listDropdownOpen}
               />
-              
+
               {listDropdownOpen && (
-                <ul className="ml-4 mt-1 border-l border-blue-900/30 pl-2">
+                <ul className="ml-4 mt-1 border-l border-blue-900/40 pl-2">
                   {currentMenuItems?.listItems?.map((item, index) => (
-                    <MenuItem 
-                      key={`list-${index}`} 
-                      to={item.to} 
-                      icon={item.icon} 
-                      label={item.label} 
+                    <MenuItem
+                      key={`list-${index}`}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
                     />
                   ))}
                 </ul>
               )}
 
               {/* Divider */}
-              <li className="my-4 border-t border-blue-900/30"></li>
+              <li className="my-4 border-t border-blue-900/40"></li>
 
               {/* Settings and Logout */}
-              <MenuItem 
-                to="/configuracoes" 
-                icon={<FaCog size={18} />} 
-                label="Configurações" 
+              <MenuItem
+                to="/configuracoes"
+                icon={<FaCog size={18} />}
+                label="Configurações"
               />
-              
-              <MenuItem 
-                icon={<FaSignOutAlt size={18} />} 
-                label="Sair" 
-                onClick={handleLogout} 
+
+              <MenuItem
+                icon={<FaSignOutAlt size={18} />}
+                label="Sair"
+                onClick={handleLogout}
               />
             </ul>
           </nav>
-          
+
           {/* Footer */}
-          <div className="p-4 mt-auto text-center text-xs text-gray-500 border-t border-blue-900/30">
+          <div className="p-4 mt-auto text-center text-xs text-blue-300 border-t border-blue-900/40 bg-blue-950">
             &copy; {new Date().getFullYear()} Imobiliária Premium
           </div>
         </div>

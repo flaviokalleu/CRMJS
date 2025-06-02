@@ -5,7 +5,7 @@ import ModalNotas from "./ModalNotas";
 import ModalEditarCliente from "./ModalEditarCliente";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { MdVisibility } from "react-icons/md";
-import { useAuth } from "../context/AuthContext"; // Já está correto
+import { useAuth } from "../context/AuthContext";
 
 const statusMap = {
   aguardando_aprovacao: {
@@ -32,7 +32,7 @@ const statusMap = {
 };
 
 const ListaClientes = () => {
-  const { user, authToken } = useAuth(); // Agora estamos obtendo o authToken corretamente
+  const { user } = useAuth();
   const [clientes, setClientes] = useState([]);
   const [status, setStatus] = useState("Todos");
   const [corretor, setCorretor] = useState("Todos");
@@ -44,9 +44,8 @@ const ListaClientes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNotasModalOpen, setIsNotasModalOpen] = useState(false);
   const [selectedNotas, setSelectedNotas] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(""); // State for search term
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchClientes = async () => {
@@ -89,16 +88,12 @@ const ListaClientes = () => {
       }
     }
   };
+
   const handleEditSave = async (clienteAtualizado) => {
     try {
-      console.log("clienteAtualizado:", clienteAtualizado);
-
-      // Garantir que o clienteAtualizado exista corretamente
       if (!clienteAtualizado || typeof clienteAtualizado !== "object") {
         throw new Error("Cliente atualizado está indefinido ou inválido.");
       }
-
-      // Verificar se o campo documentos_pessoais está presente, senão inicializar
       clienteAtualizado.documentos_pessoais =
         clienteAtualizado.documentos_pessoais || [];
 
@@ -136,49 +131,31 @@ const ListaClientes = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleStatusChange = () => {
-    // Recarregar a lista de clientes após a atualização do status
-    const fetchClientes = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_API_URL}/clientes`,
-          {
-            params: { status, corretor, dataInicio, dataFim },
-          }
-        );
-        setClientes(response.data);
-      } catch (error) {
-        console.error("Erro ao buscar clientes:", error);
-        setError("Erro ao buscar clientes. Tente novamente mais tarde.");
-      }
-      setLoading(false);
-    };
-
-    fetchClientes();
-  };
+  // Efeito de hover para linhas da tabela
+  const rowHover =
+    "transition duration-200 hover:bg-blue-900/60 hover:shadow-lg hover:scale-[1.01]";
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-800">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-black">
       <main className="flex-1 p-4 sm:p-8">
-        <h1 className="text-2xl sm:text-4xl font-bold text-white mb-4 sm:mb-8">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-8 text-center tracking-tight drop-shadow-lg">
           Lista de Clientes
         </h1>
 
         {/* Filtros */}
-        <div className="mb-4 sm:mb-6">
-          <div className="flex flex-wrap gap-2 sm:gap-4 mb-4">
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-3 sm:gap-6 mb-4 justify-center">
             <input
               type="text"
               placeholder="Buscar por nome"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-gray-700 text-white p-2 rounded"
+              className="bg-blue-900/60 text-white p-3 rounded-lg border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 shadow"
             />
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="bg-gray-700 text-white p-2 rounded"
+              className="bg-blue-900/60 text-white p-3 rounded-lg border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition shadow"
             >
               <option value="Todos">Todos</option>
               <option value="Ativo">Ativo</option>
@@ -187,7 +164,7 @@ const ListaClientes = () => {
             <select
               value={corretor}
               onChange={(e) => setCorretor(e.target.value)}
-              className="bg-gray-700 text-white p-2 rounded"
+              className="bg-blue-900/60 text-white p-3 rounded-lg border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition shadow"
             >
               <option value="Todos">Todos</option>
               {/* Mapear corretores disponíveis */}
@@ -196,58 +173,65 @@ const ListaClientes = () => {
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
-              className="bg-gray-700 text-white p-2 rounded"
+              className="bg-blue-900/60 text-white p-3 rounded-lg border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition shadow"
             />
             <input
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
-              className="bg-gray-700 text-white p-2 rounded"
+              className="bg-blue-900/60 text-white p-3 rounded-lg border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition shadow"
             />
           </div>
         </div>
 
         {/* Tabela de Clientes */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-gray-700 text-white">
+        <div className="overflow-x-auto rounded-2xl shadow-2xl border border-blue-900/40 bg-blue-950/80">
+          <table className="min-w-full text-white text-sm">
             <thead>
-              <tr>
-                <th className="p-2 sm:p-4 border-b border-gray-600 text-center">
+              <tr className="bg-blue-900/80 text-blue-200 uppercase text-xs">
+                <th className="p-4 border-b border-blue-900 text-center">
                   Nome
                 </th>
-                <th className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                <th className="p-4 border-b border-blue-900 text-center">
                   Status
                 </th>
-                <th className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                <th className="p-4 border-b border-blue-900 text-center">
                   Dia do Cadastro
                 </th>
-                <th className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                <th className="p-4 border-b border-blue-900 text-center">
                   Nome Corretor
                 </th>
-                <th className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                <th className="p-4 border-b border-blue-900 text-center">
                   Notas
                 </th>
-                <th className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                <th className="p-4 border-b border-blue-900 text-center">
                   Detalhes
                 </th>
-                <th className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                <th className="p-4 border-b border-blue-900 text-center">
                   Ações
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filteredClientes.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="text-center py-8 text-blue-200">
+                    Carregando...
+                  </td>
+                </tr>
+              ) : filteredClientes.length > 0 ? (
                 filteredClientes.map((cliente) => (
-                  <tr key={cliente.id}>
-                    <td className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                  <tr
+                    key={cliente.id}
+                    className={`${rowHover} border-b border-blue-900/40`}
+                  >
+                    <td className="p-4 text-center font-semibold text-white">
                       {cliente.nome}
                     </td>
-                    <td className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                    <td className="p-4 text-center">
                       {user.role === "corretor" ? (
                         <span
-                          className={`inline-block text-white px-2 py-1 rounded ${
-                            statusMap[cliente.status]?.color
-                          }`}
+                          className={`inline-block text-white px-2 py-1 rounded shadow ${statusMap[cliente.status]?.color}`}
                         >
                           {statusMap[cliente.status]?.name}
                         </span>
@@ -256,7 +240,7 @@ const ListaClientes = () => {
                           value={cliente.status}
                           onChange={async (e) => {
                             const newStatus = e.target.value;
-                            const token = localStorage.getItem("authToken"); // Retrieve token from localStorage
+                            const token = localStorage.getItem("authToken");
                             try {
                               const response = await fetch(
                                 `${process.env.REACT_APP_API_URL}/clientes/${cliente.id}/status`,
@@ -264,29 +248,26 @@ const ListaClientes = () => {
                                   method: "PATCH",
                                   headers: {
                                     "Content-Type": "application/json",
-                                    Authorization: `Bearer ${token}`, // Use the token from localStorage
+                                    Authorization: `Bearer ${token}`,
                                   },
                                   body: JSON.stringify({ status: newStatus }),
                                 }
                               );
-
                               if (response.ok) {
-                                console.log("Status atualizado com sucesso");
-                              } else {
-                                const errorData = await response.json(); // Capture error response for debugging
-                                console.error(
-                                  "Erro ao atualizar status:",
-                                  errorData.message
+                                // Atualize o status localmente
+                                setClientes((prev) =>
+                                  prev.map((c) =>
+                                    c.id === cliente.id
+                                      ? { ...c, status: newStatus }
+                                      : c
+                                  )
                                 );
                               }
                             } catch (error) {
-                              console.error(
-                                "Erro ao enviar requisição:",
-                                error
-                              );
+                              // Erro silencioso
                             }
                           }}
-                          className="bg-gray-800 text-white px-2 py-1 rounded"
+                          className="bg-blue-900/80 text-white px-2 py-1 rounded shadow"
                         >
                           {Object.keys(statusMap).map((statusKey) => (
                             <option key={statusKey} value={statusKey}>
@@ -296,54 +277,53 @@ const ListaClientes = () => {
                         </select>
                       )}
                     </td>
-
-                    <td className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                    <td className="p-4 text-center text-blue-200">
                       {new Date(cliente.created_at).toLocaleDateString()}
                     </td>
-                    <td className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                    <td className="p-4 text-center text-blue-100">
                       {cliente.corretor
                         ? `${cliente.corretor.first_name} ${cliente.corretor.last_name}`
                         : "Corretor não definido"}
                     </td>
-                    <td className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                    <td className="p-4 text-center">
                       <div className="relative inline-block">
-                        <button className="text-blue-500 hover:text-blue-700 relative">
+                        <button
+                          className="text-blue-400 hover:text-blue-200 transition relative"
+                          onClick={() => handleViewNotas(cliente.notas)}
+                          title="Ver notas"
+                        >
+                          <MdVisibility size={22} />
                           {cliente.notas.length > 0 && (
-                            <span className="absolute top-0 right-0 inline-flex items-center justify-center w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full">
+                            <span className="absolute -top-2 -right-2 inline-flex items-center justify-center w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg animate-pulse">
                               {cliente.notas.length}
                             </span>
                           )}
-                          <MdVisibility />
                         </button>
                       </div>
                     </td>
-
-                    <td className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                    <td className="p-4 text-center">
                       <button
-                        className="text-blue-500 hover:text-blue-700"
+                        className="text-blue-400 hover:text-blue-200 transition font-semibold underline underline-offset-2"
                         onClick={() => handleViewDetails(cliente)}
                       >
                         Ver Detalhes
                       </button>
                     </td>
-
-                    {/* Conditionally render edit and delete buttons for "Corretor" role */}
-                    {/* Renderizar botão de editar para todos e botão de deletar apenas para administradores */}
-                    <td className="p-2 sm:p-4 border-b border-gray-600 text-center">
+                    <td className="p-4 text-center flex items-center justify-center gap-2">
                       <button
-                        className="text-yellow-500 hover:text-yellow-700"
+                        className="text-yellow-400 hover:text-yellow-200 transition"
                         onClick={() => handleEdit(cliente)}
+                        title="Editar"
                       >
-                        <FaEdit />
+                        <FaEdit size={18} />
                       </button>
-
-                      {/* Renderizar botão de deletar apenas para administradores */}
                       {user.role === "Administrador" && (
                         <button
-                          className="text-red-500 hover:text-red-700 ml-2"
+                          className="text-red-500 hover:text-red-300 transition"
                           onClick={() => handleDelete(cliente.id)}
+                          title="Excluir"
                         >
-                          <FaTrashAlt />
+                          <FaTrashAlt size={18} />
                         </button>
                       )}
                     </td>
@@ -351,7 +331,7 @@ const ListaClientes = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="text-center py-4">
+                  <td colSpan="7" className="text-center py-8 text-blue-200">
                     Nenhum cliente encontrado.
                   </td>
                 </tr>
@@ -375,7 +355,7 @@ const ListaClientes = () => {
       <ModalEditarCliente
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        cliente={selectedCliente || { documentos_pessoais: [] }} // Defina um valor padrão
+        cliente={selectedCliente || { documentos_pessoais: [] }}
         onSave={handleEditSave}
       />
     </div>

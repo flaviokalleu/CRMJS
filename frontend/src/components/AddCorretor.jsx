@@ -41,7 +41,6 @@ const AddCorretor = () => {
                 }
             });
 
-            console.log('Corretor adicionado com sucesso:', response.data);
             setSuccessMessage('Corretor adicionado com sucesso!');
             setUsername('');
             setEmail('');
@@ -53,121 +52,134 @@ const AddCorretor = () => {
             setPixAccount('');
             setTelefone('');
             setPassword('');
+            setErrorMessage('');
         } catch (error) {
-            console.error('Erro ao adicionar corretor:', error);
             setErrorMessage('Erro ao adicionar corretor');
+            setSuccessMessage('');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="bg-gray-900 min-h-screen">
-            
-            <div className="container mx-auto p-8 mt-8 bg-gray-800 rounded-lg shadow-lg">
-                <h1 className="text-3xl text-white mb-6">Adicionar Corretor</h1>
+        <div className="bg-gradient-to-br from-blue-950 via-gray-900 to-black min-h-screen py-10">
+            <div className="container mx-auto max-w-2xl p-8 bg-blue-950/80 rounded-2xl shadow-2xl border border-blue-900/40">
+                <h1 className="text-3xl font-extrabold text-white mb-6 tracking-tight">Adicionar Corretor</h1>
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-white mb-2">Username</label>
+                            <label className="block text-white font-semibold mb-2">Usuário</label>
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Digite o usuário"
                             />
                         </div>
                         <div>
-                            <label className="block text-white mb-2">Email</label>
+                            <label className="block text-white font-semibold mb-2">E-mail</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Digite o e-mail"
                             />
                         </div>
                         <div>
-                            <label className="block text-white mb-2">Nome</label>
+                            <label className="block text-white font-semibold mb-2">Nome</label>
                             <input
                                 type="text"
                                 value={firstName}
                                 onChange={(e) => setFirstName(e.target.value)}
                                 required
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Primeiro nome"
                             />
                         </div>
                         <div>
-                            <label className="block text-white mb-2">Sobrenome</label>
+                            <label className="block text-white font-semibold mb-2">Sobrenome</label>
                             <input
                                 type="text"
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
                                 required
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Sobrenome"
                             />
                         </div>
                         <div className="col-span-2">
-                            <label className="block text-white mb-2">Foto</label>
+                            <label className="block text-white font-semibold mb-2">Foto</label>
                             <input
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => setPhoto(e.target.files[0])}
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-800/60 file:text-white hover:file:bg-blue-700/80"
                             />
                         </div>
                         <div>
-                            <label className="block text-white mb-2">CRECI</label>
+                            <label className="block text-white font-semibold mb-2">CRECI</label>
                             <input
                                 type="text"
                                 value={creci}
                                 onChange={(e) => setCreci(e.target.value)}
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Número do CRECI"
                             />
                         </div>
                         <div>
-                            <label className="block text-white mb-2">Endereço</label>
+                            <label className="block text-white font-semibold mb-2">Endereço</label>
                             <input
                                 type="text"
                                 value={address}
                                 onChange={(e) => setAddress(e.target.value)}
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Endereço completo"
                             />
                         </div>
                         <div>
-                            <label className="block text-white mb-2">PIX/Conta</label>
+                            <label className="block text-white font-semibold mb-2">PIX/Conta</label>
                             <input
                                 type="text"
                                 value={pixAccount}
                                 onChange={(e) => setPixAccount(e.target.value)}
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Chave PIX ou conta"
                             />
                         </div>
                         <div>
-                            <label className="block text-white mb-2">Telefone</label>
+                            <label className="block text-white font-semibold mb-2">Telefone</label>
                             <input
                                 type="text"
                                 value={telefone}
                                 onChange={(e) => setTelefone(e.target.value)}
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="(00) 00000-0000"
                             />
                         </div>
                         <div className="col-span-2">
-                            <label className="block text-white mb-2">Senha</label>
+                            <label className="block text-white font-semibold mb-2">Senha</label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                                className="w-full p-3 bg-blue-900/60 text-white border border-blue-800/40 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60"
+                                placeholder="Defina uma senha"
                             />
                         </div>
                         <div className="col-span-2">
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full p-3 text-white rounded-lg ${loading ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'} transition-colors`}
+                                className={`w-full p-3 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
+                                    loading
+                                        ? 'bg-blue-700/60 opacity-60 cursor-not-allowed text-white'
+                                        : 'bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white'
+                                }`}
                             >
                                 {loading ? 'Carregando...' : 'Adicionar Corretor'}
                             </button>
@@ -175,12 +187,12 @@ const AddCorretor = () => {
                     </div>
                 </form>
                 {successMessage && (
-                    <div className="mt-4 p-4 bg-green-600 text-white rounded-lg">
+                    <div className="mt-4 p-4 bg-green-900/30 border border-green-800/50 text-white rounded-lg text-center font-semibold">
                         {successMessage}
                     </div>
                 )}
                 {errorMessage && (
-                    <div className="mt-4 p-4 bg-red-600 text-white rounded-lg">
+                    <div className="mt-4 p-4 bg-red-900/30 border border-red-800/50 text-white rounded-lg text-center font-semibold">
                         {errorMessage}
                     </div>
                 )}

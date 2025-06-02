@@ -2,13 +2,4 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Importando estilos do slick-carousel */
-@import "~slick-carousel/slick/slick.css";
-@import "~slick-carousel/slick/slick-theme.css";
-
-/* Estilos adicionais */
-html, body, #root {
-    height: 100%;
-    margin: 0;
-    font-family: 'Arial', sans-serif; /* Exemplo de fonte padrão */
-}
+/* Custom styles below this line */

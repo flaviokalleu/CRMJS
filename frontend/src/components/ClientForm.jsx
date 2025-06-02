@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import InputMask from "react-input-mask";
+import {
+  Loader2,
+  FileText,
+  User,
+  Mail,
+  Phone,
+  CreditCard,
+  Briefcase,
+  Calendar,
+  FilePlus,
+  Wallet,
+} from "lucide-react";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const ESTADOS_API_URL = process.env.REACT_APP_ESTADOS_API_URL;
@@ -21,6 +33,8 @@ const ClientForm = ({ onSuccess }) => {
   const [possui_carteira_mais_tres_anos, setPossuiCarteiraMaisTresAnos] = useState("");
   const [numeroPis, setNumeroPis] = useState("");
   const [possuiDependente, setPossuiDependente] = useState("");
+  const [qtdDependentes, setQtdDependentes] = useState("");
+  const [nomeDependentes, setNomeDependentes] = useState("");
   const [documentosPessoais, setDocumentosPessoais] = useState([]);
   const [extratoBancario, setExtratoBancario] = useState([]);
   const [documentosDependente, setDocumentosDependente] = useState([]);
@@ -30,6 +44,7 @@ const ClientForm = ({ onSuccess }) => {
   const [estados, setEstados] = useState([]);
   const [municipios, setMunicipios] = useState([]);
   const [estado, setEstado] = useState("");
+  const [observacoes, setObservacoes] = useState("");
 
   useEffect(() => {
     const fetchEstados = async () => {
@@ -69,7 +84,7 @@ const ClientForm = ({ onSuccess }) => {
   }, [estado, estados]);
 
   const formatarValorRenda = (value) => {
-    const numero = value.replace(/\D/g, ""); // Remove tudo que não é número
+    const numero = value.replace(/\D/g, "");
     return (Number(numero) / 100).toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -82,7 +97,6 @@ const ClientForm = ({ onSuccess }) => {
 
     const token = localStorage.getItem("authToken");
     if (!token) {
-      console.error("Token de autenticação não encontrado");
       setMessage("Token de autenticação não encontrado.");
       setLoading(false);
       return;
@@ -106,6 +120,9 @@ const ClientForm = ({ onSuccess }) => {
     );
     formData.append("numero_pis", numeroPis);
     formData.append("possui_dependente", possuiDependente === "sim" ? 1 : 0);
+    formData.append("qtd_dependentes", qtdDependentes);
+    formData.append("nome_dependentes", nomeDependentes);
+    formData.append("observacoes", observacoes);
 
     documentosPessoais.forEach((file) => {
       formData.append("documentosPessoais", file);
@@ -131,14 +148,11 @@ const ClientForm = ({ onSuccess }) => {
         },
       });
       setMessage("Cliente adicionado com sucesso!");
-
       await axios.post(`${API_URL}/notificarCorrespondentes`, {
         clienteNome: nome,
       });
-
       onSuccess();
     } catch (error) {
-      console.error("Erro ao adicionar cliente:", error);
       setMessage("Erro ao adicionar cliente.");
     } finally {
       setLoading(false);
@@ -146,73 +160,86 @@ const ClientForm = ({ onSuccess }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 bg-gray-800 text-white rounded-lg">
-      <h2 className="text-xl font-semibold mb-4">Formulário de Cliente</h2>
+    <form
+      onSubmit={handleSubmit}
+     
+    >
+      <h2 className="text-3xl font-extrabold mb-2 flex items-center gap-3 tracking-tight text-white">
+        <FileText className="w-7 h-7 text-blue-400" />
+        Cadastro de Cliente
+      </h2>
+      <p className="mb-8 text-lg text-white">
+        Preencha os campos abaixo com atenção. Todos os dados são importantes para o cadastro e análise do cliente.
+      </p>
 
       {/* Nome */}
-      <div className="mb-4">
-        <label htmlFor="nome" className="block mb-2">
-          Nome
+      <div className="mb-5">
+        <label htmlFor="nome" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <User className="w-4 h-4 text-blue-400" /> Nome completo do cliente
         </label>
         <input
           id="nome"
           type="text"
           value={nome}
           onChange={(e) => setNome(e.target.value.toUpperCase())}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 text-white"
+          placeholder="Ex: MARIA DA SILVA"
           required
         />
       </div>
 
       {/* Email */}
-      <div className="mb-4">
-        <label htmlFor="email" className="block mb-2">
-          Email
+      <div className="mb-5">
+        <label htmlFor="email" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <Mail className="w-4 h-4 text-blue-400" /> E-mail para contato
         </label>
         <input
           id="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value.toUpperCase())}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 text-white"
+          placeholder="Ex: MARIA@EMAIL.COM"
           required
         />
       </div>
 
       {/* Telefone */}
-      <div className="mb-4">
-        <label htmlFor="telefone" className="block mb-2">
-          Telefone
+      <div className="mb-5">
+        <label htmlFor="telefone" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <Phone className="w-4 h-4 text-blue-400" /> Telefone celular
         </label>
         <InputMask
           id="telefone"
           mask="(99) 99999-9999"
           value={telefone}
           onChange={(e) => setTelefone(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 text-white"
+          placeholder="(00) 00000-0000"
           required
         />
       </div>
 
       {/* CPF */}
-      <div className="mb-4">
-        <label htmlFor="cpf" className="block mb-2">
-          CPF
+      <div className="mb-5">
+        <label htmlFor="cpf" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <CreditCard className="w-4 h-4 text-blue-400" /> CPF do cliente
         </label>
         <InputMask
           id="cpf"
           mask="999.999.999-99"
           value={cpf}
           onChange={(e) => setCpf(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 text-white"
+          placeholder="000.000.000-00"
           required
         />
       </div>
 
       {/* Valor da Renda */}
-      <div className="mb-4">
-        <label htmlFor="valorRenda" className="block mb-2">
-          Valor da Renda
+      <div className="mb-5">
+        <label htmlFor="valorRenda" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <Wallet className="w-4 h-4 text-blue-400" /> Valor da renda mensal
         </label>
         <input
           id="valorRenda"
@@ -222,96 +249,99 @@ const ClientForm = ({ onSuccess }) => {
             const value = e.target.value.replace(/\./g, '').replace(',', '.');
             setValorRenda(value);
           }}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 text-white"
+          placeholder="Ex: 2.000,00"
           required
         />
-        <small className="text-gray-400">Use o formato: 2.000,00</small>
+        <small className="text-white/70">Informe o valor bruto da renda mensal. Use o formato: 2.000,00</small>
       </div>
 
       {/* Estado Civil */}
-      <div className="mb-4">
-        <label htmlFor="estadoCivil" className="block mb-2">
-          Estado Civil
+      <div className="mb-5">
+        <label htmlFor="estadoCivil" className="block mb-1 font-semibold text-white">
+          Estado civil do cliente
         </label>
         <select
           id="estadoCivil"
           value={estadoCivil}
           onChange={(e) => setEstadoCivil(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
         >
-          <option value="solteiro">Solteiro</option>
-          <option value="casado">Casado</option>
-          <option value="divorciado">Divorciado</option>
-          <option value="viuvo">Viúvo</option>
+          <option value="solteiro">Solteiro(a)</option>
+          <option value="casado">Casado(a)</option>
+          <option value="divorciado">Divorciado(a)</option>
+          <option value="viuvo">Viúvo(a)</option>
         </select>
       </div>
 
-      {/* Naturalidade */}
-      <div className="mb-4">
-        <label htmlFor="estado" className="block mb-2">
-          Estado
-        </label>
-        <select
-          id="estado"
-          value={estado}
-          onChange={(e) => setEstado(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
-          required
-        >
-          <option value="">Selecione um estado</option>
-          {estados.map((est) => (
-            <option key={est.id} value={est.sigla}>
-              {est.nome}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="naturalidade" className="block mb-2">
-          Naturalidade
-        </label>
-        <select
-          id="naturalidade"
-          value={naturalidade}
-          onChange={(e) => setNaturalidade(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
-          required
-        >
-          <option value="">Selecione uma cidade</option>
-          {municipios.map((municipio) => (
-            <option key={municipio.id} value={`${municipio.nome} - ${estado}`}>
-              {municipio.nome}
-            </option>
-          ))}
-        </select>
+      {/* Estado e Naturalidade */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label htmlFor="estado" className="block mb-1 font-semibold text-white">
+            Estado de nascimento
+          </label>
+          <select
+            id="estado"
+            value={estado}
+            onChange={(e) => setEstado(e.target.value)}
+            className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
+            required
+          >
+            <option value="">Selecione um estado</option>
+            {estados.map((est) => (
+              <option key={est.id} value={est.sigla}>
+                {est.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="naturalidade" className="block mb-1 font-semibold text-white">
+            Cidade de nascimento
+          </label>
+          <select
+            id="naturalidade"
+            value={naturalidade}
+            onChange={(e) => setNaturalidade(e.target.value)}
+            className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
+            required
+          >
+            <option value="">Selecione uma cidade</option>
+            {municipios.map((municipio) => (
+              <option key={municipio.id} value={`${municipio.nome} - ${estado}`}>
+                {municipio.nome}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Profissão */}
-      <div className="mb-4">
-        <label htmlFor="profissao" className="block mb-2">
-          Profissão
+      <div className="mb-5">
+        <label htmlFor="profissao" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <Briefcase className="w-4 h-4 text-blue-400" /> Profissão atual
         </label>
         <input
           id="profissao"
           type="text"
           value={profissao}
           onChange={(e) => setProfissao(e.target.value.toUpperCase())}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 text-white"
+          placeholder="Ex: GERENTE DE VENDAS"
           required
         />
       </div>
 
       {/* Tipo de Renda */}
-      <div className="mb-4">
-        <label htmlFor="rendaTipo" className="block mb-2">
-          Tipo de Renda
+      <div className="mb-5">
+        <label htmlFor="rendaTipo" className="block mb-1 font-semibold text-white">
+          Tipo de renda
         </label>
         <select
           id="rendaTipo"
           value={rendaTipo}
           onChange={(e) => setRendaTipo(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
         >
           <option value="">Selecione</option>
           <option value="formal">Formal</option>
@@ -322,45 +352,45 @@ const ClientForm = ({ onSuccess }) => {
 
       {/* Data de Admissão */}
       {(rendaTipo === "formal" || rendaTipo === "mista") && (
-        <div className="mb-4">
-          <label htmlFor="dataAdmissao" className="block mb-2">
-            Data de Admissão
+        <div className="mb-5">
+          <label htmlFor="dataAdmissao" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+            <Calendar className="w-4 h-4 text-blue-400" /> Data de admissão no emprego atual
           </label>
           <input
             id="dataAdmissao"
             type="date"
             value={dataAdmissao}
             onChange={(e) => setDataAdmissao(e.target.value)}
-            className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+            className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
           />
         </div>
       )}
 
       {/* Data de Nascimento */}
-      <div className="mb-4">
-        <label htmlFor="dataNascimento" className="block mb-2">
-          Data de Nascimento
+      <div className="mb-5">
+        <label htmlFor="dataNascimento" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <Calendar className="w-4 h-4 text-blue-400" /> Data de nascimento
         </label>
         <input
           id="dataNascimento"
           type="date"
           value={dataNascimento}
           onChange={(e) => setDataNascimento(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
           required
         />
       </div>
 
       {/* Possui Carteira há mais de três anos */}
-      <div className="mb-4">
-        <label htmlFor="possuiCarteira" className="block mb-2">
-          Possui Carteira de Trabalho há mais de 3 anos?
+      <div className="mb-5">
+        <label htmlFor="possuiCarteira" className="block mb-1 font-semibold text-white">
+          Possui carteira de trabalho há mais de 3 anos?
         </label>
         <select
           id="possuiCarteira"
           value={possui_carteira_mais_tres_anos}
           onChange={(e) => setPossuiCarteiraMaisTresAnos(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
         >
           <option value="">Selecione</option>
           <option value="sim">Sim</option>
@@ -368,32 +398,33 @@ const ClientForm = ({ onSuccess }) => {
         </select>
       </div>
 
-     {/* Número do PIS */}
-{possui_carteira_mais_tres_anos === "sim" && (
-  <div className="mb-4">
-    <label htmlFor="numeroPis" className="block mb-2">
-      Número do PIS
-    </label>
-    <input
-      id="numeroPis"
-      type="text"
-      value={numeroPis}
-      onChange={(e) => setNumeroPis(e.target.value)}
-      className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
-    />
-  </div>
-)}
+      {/* Número do PIS */}
+      {possui_carteira_mais_tres_anos === "sim" && (
+        <div className="mb-5">
+          <label htmlFor="numeroPis" className="block mb-1 font-semibold text-white">
+            Número do PIS
+          </label>
+          <input
+            id="numeroPis"
+            type="text"
+            value={numeroPis}
+            onChange={(e) => setNumeroPis(e.target.value)}
+            className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
+            placeholder="Ex: 123.45678.90-1"
+          />
+        </div>
+      )}
 
       {/* Possui Dependente */}
-      <div className="mb-4">
-        <label htmlFor="possuiDependente" className="block mb-2">
-          Possui Dependente?
+      <div className="mb-5">
+        <label htmlFor="possuiDependente" className="block mb-1 font-semibold text-white">
+          Possui dependente(s)?
         </label>
         <select
           id="possuiDependente"
           value={possuiDependente}
           onChange={(e) => setPossuiDependente(e.target.value)}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
         >
           <option value="">Selecione</option>
           <option value="sim">Sim</option>
@@ -401,75 +432,139 @@ const ClientForm = ({ onSuccess }) => {
         </select>
       </div>
 
+      {/* Quantidade e Nome dos Dependentes */}
+      {possuiDependente === "sim" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+          <div>
+            <label htmlFor="qtdDependentes" className="block mb-1 font-semibold text-white">
+              Quantidade de dependentes
+            </label>
+            <input
+              id="qtdDependentes"
+              type="number"
+              min="1"
+              value={qtdDependentes}
+              onChange={(e) => setQtdDependentes(e.target.value)}
+              className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
+              placeholder="Ex: 2"
+            />
+          </div>
+          <div>
+            <label htmlFor="nomeDependentes" className="block mb-1 font-semibold text-white">
+              Nome dos dependentes
+            </label>
+            <input
+              id="nomeDependentes"
+              type="text"
+              value={nomeDependentes}
+              onChange={(e) => setNomeDependentes(e.target.value.toUpperCase())}
+              className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition text-white"
+              placeholder="Ex: JOÃO, ANA"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Documentos Pessoais */}
-      <div className="mb-4">
-        <label htmlFor="documentosPessoais" className="block mb-2">
-          Documentos Pessoais
+      <div className="mb-5">
+        <label htmlFor="documentosPessoais" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <FilePlus className="w-4 h-4 text-blue-400" /> Documentos pessoais (RG, CPF, etc)
         </label>
         <input
           type="file"
           multiple
           onChange={(e) => setDocumentosPessoais(Array.from(e.target.files))}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-800/60 file:text-white hover:file:bg-blue-700/80"
         />
       </div>
 
       {/* Extrato Bancário */}
-      <div className="mb-4">
-        <label htmlFor="extratoBancario" className="block mb-2">
-          Extrato Bancário
+      <div className="mb-5">
+        <label htmlFor="extratoBancario" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+          <FilePlus className="w-4 h-4 text-blue-400" /> Extrato bancário dos últimos 3 meses
         </label>
         <input
           type="file"
           multiple
           onChange={(e) => setExtratoBancario(Array.from(e.target.files))}
-          className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+          className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-800/60 file:text-white hover:file:bg-blue-700/80"
         />
       </div>
 
       {/* Documentos do Dependente */}
       {possuiDependente === "sim" && (
-        <div className="mb-4">
-          <label htmlFor="documentosDependente" className="block mb-2">
-            Documentos do Dependente
+        <div className="mb-5">
+          <label htmlFor="documentosDependente" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+            <FilePlus className="w-4 h-4 text-blue-400" /> Documentos dos dependentes
           </label>
           <input
             type="file"
             multiple
             onChange={(e) => setDocumentosDependente(Array.from(e.target.files))}
-            className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+            className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-800/60 file:text-white hover:file:bg-blue-700/80"
           />
         </div>
       )}
 
       {/* Documentos do Cônjuge */}
       {estadoCivil === "casado" && (
-        <div className="mb-4">
-          <label htmlFor="documentosConjuge" className="block mb-2">
-            Documentos do Cônjuge
+        <div className="mb-5">
+          <label htmlFor="documentosConjuge" className="block mb-1 font-semibold flex items-center gap-2 text-white">
+            <FilePlus className="w-4 h-4 text-blue-400" /> Documentos do cônjuge
           </label>
           <input
             type="file"
             multiple
             onChange={(e) => setDocumentosConjuge(Array.from(e.target.files))}
-            className="w-full p-3 rounded-md bg-gray-700 border border-gray-600"
+            className="w-full p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-800/60 file:text-white hover:file:bg-blue-700/80"
           />
         </div>
       )}
 
+      {/* Observações */}
+      <div className="mb-8">
+        <label htmlFor="observacoes" className="block mb-1 font-semibold text-white">
+          Observações adicionais
+        </label>
+        <textarea
+          id="observacoes"
+          value={observacoes}
+          onChange={(e) => setObservacoes(e.target.value)}
+          className="w-full min-h-[80px] p-3 rounded-lg bg-blue-950/60 border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 text-white"
+          placeholder="Inclua aqui qualquer informação relevante sobre o cliente, situação financeira, histórico, etc."
+        />
+      </div>
+
       {/* Botão de Enviar */}
       <button
         type="submit"
-        className={`w-full p-3 rounded-md bg-blue-600 hover:bg-blue-500 ${
-          loading ? "opacity-50 cursor-not-allowed" : ""
-        }`}
+        className={`w-full p-3 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all duration-200 ${
+          loading ? "opacity-60 cursor-not-allowed" : ""
+        } text-white`}
         disabled={loading}
       >
-        {loading ? "Enviando..." : "Enviar"}
+        {loading ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Enviando...
+          </>
+        ) : (
+          "Cadastrar Cliente"
+        )}
       </button>
 
       {/* Mensagem de status */}
-      {message && <p className="mt-4 text-red-400">{message}</p>}
+      {message && (
+        <div
+          className={`mt-6 p-4 rounded-lg text-center font-semibold text-lg ${
+            message.includes("sucesso")
+              ? "bg-green-900/30 border border-green-800/50 text-white"
+              : "bg-red-900/30 border border-red-800/50 text-white"
+          }`}
+        >
+          {message}
+        </div>
+      )}
     </form>
   );
 };

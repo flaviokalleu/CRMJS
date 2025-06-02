@@ -11,7 +11,7 @@
     "postbuild": "copyfiles -u 1 'src/server.js' '.env' dist",
     "start": "node dist/server.js",
     "st": "node src/server.js",
-    "init": "npm run migrate && npm run seed && node dist/populateDatabase.js"
+    "init": "npm run migrate && npm run seed && node src/populateDatabase.js"
   },
   "keywords": [],
   "author": "",

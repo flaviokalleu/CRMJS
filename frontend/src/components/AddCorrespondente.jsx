@@ -14,11 +14,15 @@ const AddCorrespondente = () => {
   const [address, setAddress] = useState("");
   const [PIXConta, setPIXConta] = useState("");
   const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false); // Estado para controlar o loading
+  const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); // Ativar o loading
+    setLoading(true);
+    setSuccessMsg("");
+    setErrorMsg("");
 
     const formData = new FormData();
     formData.append("username", username);
@@ -26,7 +30,7 @@ const AddCorrespondente = () => {
     formData.append("password", password);
     formData.append("first_name", firstName);
     formData.append("last_name", lastName);
-    formData.append("photo", photo);
+    if (photo) formData.append("photo", photo);
     formData.append("CRECI", CRECI);
     formData.append("address", address);
     formData.append("PIX_Conta", PIXConta);
@@ -39,9 +43,7 @@ const AddCorrespondente = () => {
         },
       });
 
-      console.log("Correspondente adicionado com sucesso:", response.data);
-
-      // Limpar o formulário após a submissão
+      setSuccessMsg("Correspondente adicionado com sucesso!");
       setUsername("");
       setEmail("");
       setPassword("");
@@ -53,171 +55,211 @@ const AddCorrespondente = () => {
       setPIXConta("");
       setPhone("");
     } catch (error) {
+      setErrorMsg("Erro ao adicionar correspondente. Verifique os dados.");
       console.error("Erro ao adicionar correspondente:", error);
     } finally {
-      setLoading(false); // Desativar o loading
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-black">
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="text-white text-xl">Por favor, aguarde...</div>
         </div>
       )}
       <div
-        className={`bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-lg ${
+        className={`bg-blue-950/90 p-8 rounded-2xl shadow-2xl w-full max-w-lg border border-blue-900/40 ${
           loading ? "opacity-50" : ""
         }`}
       >
-        <h1 className="text-2xl font-semibold text-white mb-6">
+        <h1 className="text-3xl font-extrabold text-white mb-8 text-center tracking-tight">
           Adicionar Correspondente
         </h1>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-gray-400 mb-2">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                disabled={loading} // Desativar durante o loading
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="block text-gray-400 mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-gray-400 mb-2">
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="firstName" className="block text-gray-400 mb-2">
-                Nome
-              </label>
-              <input
-                id="firstName"
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="block text-gray-400 mb-2">
-                Sobrenome
-              </label>
-              <input
-                id="lastName"
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="photo" className="block text-gray-400 mb-2">
-                Foto
-              </label>
-              <input
-                id="photo"
-                type="file"
-                onChange={(e) => setPhoto(e.target.files[0])}
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="CRECI" className="block text-gray-400 mb-2">
-                CRECI
-              </label>
-              <input
-                id="CRECI"
-                type="text"
-                value={CRECI}
-                onChange={(e) => setCRECI(e.target.value)}
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="address" className="block text-gray-400 mb-2">
-                Endereço
-              </label>
-              <input
-                id="address"
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="PIXConta" className="block text-gray-400 mb-2">
-                PIX/Conta
-              </label>
-              <input
-                id="PIXConta"
-                type="text"
-                value={PIXConta}
-                onChange={(e) => setPIXConta(e.target.value)}
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <div>
-              <label htmlFor="phone" className="block text-gray-400 mb-2">
-                Telefone
-              </label>
-              <input
-                id="phone"
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={loading}
-                className="w-full p-3 bg-gray-700 text-white border border-gray-600 rounded"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading} // Desativar o botão durante o loading
-              className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label
+              htmlFor="username"
+              className="block text-white font-semibold mb-1"
             >
-              {loading ? "Adicionando..." : "Adicionar Correspondente"}
-            </button>
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
           </div>
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-white font-semibold mb-1"
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-white font-semibold mb-1"
+            >
+              Senha
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="firstName"
+              className="block text-white font-semibold mb-1"
+            >
+              Nome
+            </label>
+            <input
+              id="firstName"
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="lastName"
+              className="block text-white font-semibold mb-1"
+            >
+              Sobrenome
+            </label>
+            <input
+              id="lastName"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="photo"
+              className="block text-white font-semibold mb-1"
+            >
+              Foto
+            </label>
+            <input
+              id="photo"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setPhoto(e.target.files[0])}
+              disabled={loading}
+              className="w-full text-white file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-700 file:text-white hover:file:bg-blue-600"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="CRECI"
+              className="block text-white font-semibold mb-1"
+            >
+              CRECI
+            </label>
+            <input
+              id="CRECI"
+              type="text"
+              value={CRECI}
+              onChange={(e) => setCRECI(e.target.value)}
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="address"
+              className="block text-white font-semibold mb-1"
+            >
+              Endereço
+            </label>
+            <input
+              id="address"
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="PIXConta"
+              className="block text-white font-semibold mb-1"
+            >
+              PIX/Conta
+            </label>
+            <input
+              id="PIXConta"
+              type="text"
+              value={PIXConta}
+              onChange={(e) => setPIXConta(e.target.value)}
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="phone"
+              className="block text-white font-semibold mb-1"
+            >
+              Telefone
+            </label>
+            <input
+              id="phone"
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              disabled={loading}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+            />
+          </div>
+          {successMsg && (
+            <div className="text-green-400 text-center font-semibold">
+              {successMsg}
+            </div>
+          )}
+          {errorMsg && (
+            <div className="text-red-400 text-center font-semibold">
+              {errorMsg}
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 mt-4 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white"
+          >
+            {loading ? "Adicionando..." : "Adicionar Correspondente"}
+          </button>
         </form>
       </div>
     </div>

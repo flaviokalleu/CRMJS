@@ -79,6 +79,7 @@ fs.readdirSync(__dirname)
     return (
       file.indexOf('.') !== 0 &&
       file !== 'database.js' &&
+      file !== 'config.js' && // Ignora config.js
       file.slice(-3) === '.js'
     );
   })

@@ -1,29 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import {
-  TextField,
-  Typography,
-  InputAdornment,
-  Checkbox,
-  FormControlLabel,
-  Snackbar,
-  Alert,
-  Box,
-  Container,
-  Paper,
-  IconButton,
-  Divider,
-} from "@mui/material";
-import {
-  Lock,
-  Email,
-  Visibility,
-  VisibilityOff,
-  HelpOutline,
-} from "@mui/icons-material";
-import { motion } from "framer-motion";
-import LoadingScreen from "./LoadingScreen";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -37,373 +14,169 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoadingScreenVisible(false);
-    }, 2000);
-
+    const timer = setTimeout(() => setLoadingScreenVisible(false), 1200);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
+    if (user) navigate("/dashboard");
   }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage("");
-
     if (!validateEmail(email)) {
       setErrorMessage("Por favor, insira um email válido.");
       setLoading(false);
       return;
     }
-
     try {
       const { token, role } = await login(email, password);
-
       if (["corretor", "correspondente", "Administrador"].includes(role)) {
         localStorage.setItem("authToken", token);
-        if (rememberMe) {
-          localStorage.setItem("rememberedEmail", email);
-        } else {
-          localStorage.removeItem("rememberedEmail");
-        }
+        if (rememberMe) localStorage.setItem("rememberedEmail", email);
+        else localStorage.removeItem("rememberedEmail");
       } else {
         setErrorMessage("Você não tem permissão para acessar o sistema.");
       }
-    } catch (error) {
-      console.error("Erro ao fazer login:", error);
+    } catch {
       setErrorMessage("Falha no login. Verifique suas credenciais.");
     }
-
     setLoading(false);
   };
 
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(email).toLowerCase());
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword((prevShowPassword) => !prevShowPassword);
-  };
-
-  const handleCloseSnackbar = () => {
-    setErrorMessage("");
-  };
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   if (loadingScreenVisible) {
-    return <LoadingScreen />;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-gray-900">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-400 border-opacity-70"></div>
+      </div>
+    );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
-        padding: 3,
-      }}
-    >
-      <Container maxWidth="sm" sx={{ padding: 0 }}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-        >
-          <Paper
-            elevation={10}
-            sx={{
-              borderRadius: 4,
-              overflow: "hidden",
-              background: "#0a0a0a",
-              border: "1px solid rgba(255, 215, 0, 0.3)",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 215, 0, 0.2)",
-            }}
-          >
-            {/* Logo e cabeçalho */}
-            <Box
-              sx={{
-                padding: 5,
-                paddingBottom: 3,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                position: "relative",
-              }}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-gray-900 px-4">
+      <div className="w-full max-w-md bg-blue-950/80 backdrop-blur-md rounded-2xl shadow-2xl border border-blue-800/40 p-8">
+        <div className="flex flex-col items-center mb-8">
+          <div className="bg-blue-900/30 border border-blue-700/40 rounded-full p-4 mb-4">
+            <svg
+              className="w-10 h-10 text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
             >
-              <Box
-                sx={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: "50%",
-                  backgroundColor: "#000000",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "2px solid #FFD700",
-                  marginBottom: 3,
-                }}
-              >
-                <Lock sx={{ color: "#FFD700", fontSize: 40 }} />
-              </Box>
-
-              <Typography
-                variant="h4"
-                component="h1"
-                sx={{
-                  color: "#FFD700",
-                  fontWeight: 700,
-                  marginBottom: 1,
-                  fontFamily: "'Montserrat', sans-serif",
-                  letterSpacing: 1,
-                }}
-              >
-                BEM-VINDO
-              </Typography>
-
-              <Typography
-                variant="body1"
-                sx={{
-                  color: "#a0a0a0",
-                  marginBottom: 2,
-                  textAlign: "center",
-                  maxWidth: "80%",
-                }}
-              >
-                Faça login para acessar sua conta
-              </Typography>
-
-              <Divider
-                sx={{
-                  width: "40%",
-                  margin: "10px auto",
-                  backgroundColor: "rgba(255, 215, 0, 0.3)",
-                }}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5s-3 1.343-3 3 1.343 3 3 3zm0 2c-2.21 0-4 1.343-4 3v2h8v-2c0-1.657-1.79-3-4-3z"
               />
-            </Box>
-
-            {/* Formulário */}
-            <Box
-              component="form"
-              onSubmit={handleSubmit}
-              sx={{
-                padding: 5,
-                paddingTop: 2,
-              }}
-            >
-              <TextField
-                variant="outlined"
-                label="Email"
-                type="email"
-                fullWidth
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                margin="normal"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email sx={{ color: "#FFD700" }} />
-                    </InputAdornment>
-                  ),
-                }}
-                InputLabelProps={{
-                  sx: { color: "rgba(255, 215, 0, 0.7)" },
-                }}
-                sx={{
-                  marginBottom: 3,
-                  "& .MuiOutlinedInput-root": {
-                    "& fieldset": {
-                      borderColor: "rgba(255, 215, 0, 0.3)",
-                      borderRadius: 2,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "rgba(255, 215, 0, 0.5)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#FFD700",
-                    },
-                    color: "#ffffff",
-                    backgroundColor: "rgba(0, 0, 0, 0.4)",
-                  },
-                }}
-              />
-
-              <TextField
-                variant="outlined"
-                label="Senha"
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-blue-300 tracking-wide mb-1">
+            Bem-vindo
+          </h1>
+          <p className="text-blue-200 text-center text-sm">
+            Acesse sua conta para continuar
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm text-blue-200 mb-1">Email</label>
+            <input
+              type="email"
+              className="w-full px-4 py-2 rounded-lg bg-blue-900/60 border border-blue-800/40 text-blue-100 focus:outline-none focus:border-blue-400 transition"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-blue-200 mb-1">Senha</label>
+            <div className="relative">
+              <input
                 type={showPassword ? "text" : "password"}
-                fullWidth
+                className="w-full px-4 py-2 rounded-lg bg-blue-900/60 border border-blue-800/40 text-blue-100 focus:outline-none focus:border-blue-400 transition pr-10"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                margin="normal"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: "#FFD700" }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={togglePasswordVisibility}
-                        edge="end"
-                        sx={{ color: "#FFD700" }}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                InputLabelProps={{
-                  sx: { color: "rgba(255, 215, 0, 0.7)" },
-                }}
-                sx={{
-                  marginBottom: 2,
-                  "& .MuiOutlinedInput-root": {
-                    "& fieldset": {
-                      borderColor: "rgba(255, 215, 0, 0.3)",
-                      borderRadius: 2,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "rgba(255, 215, 0, 0.5)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#FFD700",
-                    },
-                    color: "#ffffff",
-                    backgroundColor: "rgba(0, 0, 0, 0.4)",
-                  },
-                }}
               />
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 3,
-                  marginTop: 1,
-                }}
+              <button
+                type="button"
+                tabIndex={-1}
+                className="absolute right-2 top-2 text-blue-400 hover:text-blue-300 transition"
+                onClick={() => setShowPassword((v) => !v)}
               >
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      sx={{
-                        color: "rgba(255, 215, 0, 0.5)",
-                        "&.Mui-checked": { color: "#FFD700" },
-                      }}
+                {showPassword ? (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.336-3.234.938-4.675M15 12a3 3 0 11-6 0 3 3 0 016 0zm6.062-4.675A9.956 9.956 0 0122 9c0 5.523-4.477 10-10 10a9.956 9.956 0 01-4.675-.938"
                     />
-                  }
-                  label={
-                    <Typography sx={{ color: "#a0a0a0", fontSize: 14 }}>
-                      Lembrar-me
-                    </Typography>
-                  }
-                />
-
-                <Typography
-                  variant="body2"
-                  component="a"
-                  href="/forgot-password"
-                  sx={{
-                    color: "#FFD700",
-                    textDecoration: "none",
-                    fontSize: 14,
-                    display: "flex",
-                    alignItems: "center",
-                    "&:hover": {
-                      textDecoration: "underline",
-                    },
-                  }}
-                >
-                  <HelpOutline sx={{ fontSize: 16, marginRight: 0.5 }} />
-                  Esqueceu a senha?
-                </Typography>
-              </Box>
-
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Box
-                  component="button"
-                  type="submit"
-                  disabled={loading}
-                  sx={{
-                    width: "100%",
-                    padding: "15px",
-                    fontSize: "16px",
-                    fontWeight: 600,
-                    color: "#000000",
-                    backgroundColor: "#FFD700",
-                    border: "none",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                    transition: "all 0.3s",
-                    "&:hover": {
-                      backgroundColor: "#f0c800",
-                      boxShadow: "0 4px 15px rgba(255, 215, 0, 0.4)",
-                    },
-                    "&:disabled": {
-                      backgroundColor: "#7d7d7d",
-                      cursor: "not-allowed",
-                    },
-                    marginBottom: 2,
-                  }}
-                >
-                  {loading ? "Autenticando..." : "ENTRAR"}
-                </Box>
-              </motion.div>
-            </Box>
-
-            {/* Rodapé */}
-            <Box
-              sx={{
-                background: "rgba(0, 0, 0, 0.7)",
-                padding: 2,
-                textAlign: "center",
-                borderTop: "1px solid rgba(255, 215, 0, 0.2)",
-              }}
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm2.21-2.21A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10S2 17.523 2 12c0-1.657.336-3.234.938-4.675"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center text-blue-200 text-sm">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="accent-blue-400 mr-2"
+              />
+              Lembrar-me
+            </label>
+            <a
+              href="/forgot-password"
+              className="text-blue-400 text-xs hover:underline transition"
             >
-              <Typography variant="body2" sx={{ color: "#a0a0a0" }}>
-                © 2025 • Sistema de Gestão Imobiliária
-              </Typography>
-            </Box>
-          </Paper>
-        </motion.div>
-      </Container>
-
-      {/* Snackbar para mensagens de erro */}
-      <Snackbar
-        open={Boolean(errorMessage)}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity="error"
-          variant="filled"
-          sx={{
-            width: "100%",
-            backgroundColor: "#5c0000",
-            color: "#ffffff",
-          }}
-        >
-          {errorMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+              Esqueceu a senha?
+            </a>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-400 transition disabled:bg-gray-500 disabled:cursor-not-allowed shadow-md"
+          >
+            {loading ? "Autenticando..." : "Entrar"}
+          </button>
+        </form>
+        {errorMessage && (
+          <div className="mt-6 bg-red-900/80 text-white text-center rounded-lg py-2 px-4 animate-fade-in">
+            {errorMessage}
+          </div>
+        )}
+        <div className="mt-8 text-center text-xs text-blue-300">
+          © 2025 • Sistema de Gestão Imobiliária
+        </div>
+      </div>
+    </div>
   );
 };
 

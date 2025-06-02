@@ -31,7 +31,7 @@ const AddAluguelForm = ({ onSuccess }) => {
     if (name === "fotoCapa") {
       setFotoCapa(files[0]);
     } else if (name === "fotoAdicional") {
-      setFotoAdicional(files); // Mude para 'files' para pegar todos os arquivos
+      setFotoAdicional(files);
     }
   };
 
@@ -70,16 +70,18 @@ const AddAluguelForm = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-black text-white">
       <form
         onSubmit={handleSubmit}
         encType="multipart/form-data"
-        className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-lg"
+        className="bg-blue-950/90 p-8 rounded-2xl shadow-2xl w-full max-w-xl border border-blue-900/40"
       >
-        <h2 className="text-2xl font-semibold mb-6">Adicionar Novo Aluguel</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
+        <h2 className="text-3xl font-extrabold mb-8 text-center tracking-tight text-white">
+          Adicionar Novo Aluguel
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="col-span-1">
+            <label className="block text-sm font-semibold mb-2">
               Nome do Imóvel
             </label>
             <input
@@ -88,23 +90,23 @@ const AddAluguelForm = ({ onSuccess }) => {
               value={formData.nome_imovel}
               onChange={handleChange}
               required
-              className="w-full p-3 rounded-md border border-gray-700 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
               placeholder="Nome do Imóvel"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Descrição</label>
+          <div className="col-span-1">
+            <label className="block text-sm font-semibold mb-2">Descrição</label>
             <textarea
               name="descricao"
               value={formData.descricao}
               onChange={handleChange}
               required
-              className="w-full p-3 rounded-md border border-gray-700 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition min-h-[48px]"
               placeholder="Descrição"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-semibold mb-2">
               Valor do Aluguel
             </label>
             <input
@@ -113,37 +115,52 @@ const AddAluguelForm = ({ onSuccess }) => {
               value={formData.valor_aluguel}
               onChange={handleChange}
               required
-              className="w-full p-3 rounded-md border border-gray-700 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
               placeholder="Valor do Aluguel"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Quartos</label>
+            <label className="block text-sm font-semibold mb-2">Quartos</label>
             <input
               type="number"
               name="quartos"
               value={formData.quartos}
               onChange={handleChange}
               required
-              className="w-full p-3 rounded-md border border-gray-700 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
               placeholder="Número de Quartos"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Banheiro</label>
+            <label className="block text-sm font-semibold mb-2">Banheiro</label>
             <input
               type="number"
               name="banheiro"
               value={formData.banheiro}
               onChange={handleChange}
               required
-              className="w-full p-3 rounded-md border border-gray-700 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
               placeholder="Número de Banheiros"
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-semibold mb-2">
+              Dia do Vencimento
+            </label>
+            <input
+              type="number"
+              name="dia_vencimento"
+              value={formData.dia_vencimento}
+              onChange={handleChange}
+              required
+              min={1}
+              max={31}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
+              placeholder="Dia do vencimento"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2">
               Foto de Capa
             </label>
             <input
@@ -151,11 +168,11 @@ const AddAluguelForm = ({ onSuccess }) => {
               name="fotoCapa"
               accept="image/*"
               onChange={handleFileChange}
-              className="w-full text-gray-400 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              className="w-full text-white file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-700 file:text-white hover:file:bg-blue-600"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-semibold mb-2">
               Fotos Adicionais
             </label>
             <input
@@ -164,20 +181,22 @@ const AddAluguelForm = ({ onSuccess }) => {
               accept="image/*"
               multiple
               onChange={handleFileChange}
-              className="w-full text-gray-400 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              className="w-full text-white file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-700 file:text-white hover:file:bg-blue-600"
             />
           </div>
-          {error && <p className="mt-4 text-red-500">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2 rounded-lg font-semibold ${
-              loading ? "bg-gray-600" : "bg-blue-600 hover:bg-blue-700"
-            } text-white`}
-          >
-            {loading ? "Enviando..." : "Enviar"}
-          </button>
         </div>
+        {error && <p className="mt-4 text-red-400 text-center">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full mt-8 py-3 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
+            loading
+              ? "bg-blue-700/60 opacity-60 cursor-not-allowed text-white"
+              : "bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white"
+          }`}
+        >
+          {loading ? "Enviando..." : "Adicionar Aluguel"}
+        </button>
       </form>
     </div>
   );

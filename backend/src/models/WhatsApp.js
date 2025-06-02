@@ -33,8 +33,8 @@ const initializeWhatsAppModel = (sequelize) => {
     },
     {
       sequelize,
-      modelName: 'WhatsApp', // Nome do modelo
-      tableName: 'whatsapps',  // Nome da tabela
+      modelName: 'WhatsApp',
+      tableName: 'whatsapps',
     }
   );
 
