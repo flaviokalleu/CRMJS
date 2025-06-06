@@ -1,5 +1,4 @@
 // backend/src/routes/correspondente.js
-// backend/src/routes/correspondente.js
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -7,9 +6,8 @@ const sharp = require('sharp');
 const fs = require('fs/promises');
 const path = require('path');
 const bcrypt = require('bcrypt');
-const { Correspondente } = require('../models');
-const { authenticateToken } = require('./authRoutes'); // Adicione esta linha para importar o middleware de autenticação
-
+const { User } = require('../models'); // Atualizado para User
+const { authenticateToken } = require('./authRoutes');
 
 const uploadPath = path.join(__dirname, '../../uploads/imagem_correspondente');
 const deletePath = path.join(__dirname, '../../uploads/deletar');
@@ -83,7 +81,7 @@ router.post('/', upload.single('photo'), async (req, res) => {
     const originalFileName = req.file.filename;
     const photo = await processImage(path.join(uploadPath, originalFileName), `${originalFileName}.webp`);
 
-    const correspondente = await Correspondente.create({
+    const user = await User.create({
       username,
       email,
       first_name,
@@ -92,8 +90,9 @@ router.post('/', upload.single('photo'), async (req, res) => {
       creci: creci || null,
       address: address || null,
       pix_account: pix_account || null,
-      phone,
-      photo
+      telefone: phone,
+      photo,
+      is_correspondente: true // Marca como correspondente
     });
 
     try {
@@ -103,7 +102,7 @@ router.post('/', upload.single('photo'), async (req, res) => {
       await moveToDeleteFolder(originalFileName);
     }
 
-    res.status(201).json(correspondente);
+    res.status(201).json(user);
   } catch (error) {
     console.error('Erro ao criar correspondente:', error);
 
@@ -118,7 +117,7 @@ router.post('/', upload.single('photo'), async (req, res) => {
 // Nova rota para listar todos os correspondentes
 router.get('/lista', async (req, res) => {
   try {
-    const correspondentes = await Correspondente.findAll();
+    const correspondentes = await User.findAll({ where: { is_correspondente: true } });
     res.json(correspondentes);
   } catch (error) {
     console.error('Erro ao listar correspondentes:', error);
@@ -130,31 +129,30 @@ router.get('/lista', async (req, res) => {
 router.put('/me', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
     const { first_name, email, password } = req.body;
-    const correspondente = await Correspondente.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id);
 
-    if (!correspondente) {
+    if (!user || !user.is_correspondente) {
       return res.status(404).json({ error: 'Correspondente não encontrado' });
     }
 
-    correspondente.first_name = first_name || correspondente.first_name;
-    correspondente.email = email || correspondente.email;
+    user.first_name = first_name || user.first_name;
+    user.email = email || user.email;
 
     if (password) {
-      correspondente.password = await bcrypt.hash(password, 10);
+      user.password = await bcrypt.hash(password, 10);
     }
 
     if (req.file) {
       const photo = await processImage(req.file.path);
-      correspondente.photo = photo;
+      user.photo = photo;
     }
 
-    await correspondente.save();
-    res.json(correspondente);
+    await user.save();
+    res.json(user);
   } catch (error) {
     console.error('Erro ao atualizar correspondente:', error);
     res.status(400).json({ error: error.message });
   }
 });
-
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, Cliente, Administrador, Correspondente, Imovel, Proprietario, Lembrete, Corretor } = require('../models');
+const { User, Cliente, Imovel, Proprietario, Lembrete } = require('../models');
 
 // Endpoints para User
 router.get('/users', async (req, res) => {
@@ -22,21 +22,31 @@ router.get('/clientes', async (req, res) => {
     }
 });
 
-// Endpoints para Administrador
+// Endpoints para Administrador (usando User)
 router.get('/administradores', async (req, res) => {
     try {
-        const administradores = await Administrador.findAll();
+        const administradores = await User.findAll({ where: { is_administrador: true } });
         res.json(administradores);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Endpoints para Correspondente
+// Endpoints para Correspondente (usando User)
 router.get('/correspondentes', async (req, res) => {
     try {
-        const correspondentes = await Correspondente.findAll();
+        const correspondentes = await User.findAll({ where: { is_correspondente: true } });
         res.json(correspondentes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Endpoints para Corretor (usando User)
+router.get('/corretores', async (req, res) => {
+    try {
+        const corretores = await User.findAll({ where: { is_corretor: true } });
+        res.json(corretores);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -71,17 +81,5 @@ router.get('/lembretes', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-// Endpoints para Corretor
-// Endpoints para Corretor
-router.get('/corretores', async (req, res) => {
-    try {
-        const corretores = await Corretor.findAll();
-        res.json(corretores);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 
 module.exports = router;

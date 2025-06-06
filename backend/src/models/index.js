@@ -5,22 +5,30 @@ const Sequelize = require('sequelize');
 // Carregar as variáveis de ambiente do arquivo .env
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'gci',
-  process.env.DB_USERNAME || 'postgres',
-  process.env.DB_PASSWORD || '',
-  {
+const config = {
+  development: {
+    database: process.env.DB_NAME || 'crm',
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD,
     host: process.env.DB_HOST || 'localhost',
-    dialect: 'postgres', // Configurado para PostgreSQL
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
     logging: false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+    dialectOptions: {
+      ssl: false
+    },
+    define: {
+      timestamps: true,
+      underscored: true,
+      underscoredAll: true,
+      // Set default index configuration
+      indexes: []
     }
   }
-);
+};
+
+const sequelize = new Sequelize(config[process.env.NODE_ENV || 'development']);
+sequelize.options.logging = false; // Disable logging for index operations
 
 const db = {};
 
@@ -47,7 +55,7 @@ fs.readdirSync(__dirname)
     }
   });
 
-// Carregar associações
+// Só depois de todos os models carregados:
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

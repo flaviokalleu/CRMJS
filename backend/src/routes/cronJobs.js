@@ -1,14 +1,14 @@
 const cron = require('node-cron');
-const moment = require('moment');
-const { Lembrete, ClienteAluguel } = require('../models'); // Ajuste conforme necessário
+const moment = require('moment-timezone');
+const { Lembrete, ClienteAluguel } = require('../models');
 const { client, isAuthenticated } = require('./whatsappRoutes');
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') }); // Carrega .env
-const { backupDatabase } = require('../utils/backup'); // Corrigido para importar backupDatabase
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+const { backupDatabase } = require('../utils/backup');
 
-const defaultPhoneNumber = process.env.DEFAULT_PHONE_NUMBER; // Número padrão do telefone
+const defaultPhoneNumber = process.env.DEFAULT_PHONE_NUMBER;
 
 const isHorarioComercial = () => {
-  const now = moment();
+  const now = moment().tz('America/Sao_Paulo');
   const diaSemana = now.isoWeekday(); // 1 = segunda-feira, 7 = domingo
   const hora = now.hour();
 
@@ -25,14 +25,14 @@ const verificarLembretesParaNotificacao = async () => {
   console.log('Verificando lembretes para notificação...');
   try {
     const lembretes = await Lembrete.findAll();
-    const now = moment();
+    const now = moment().tz('America/Sao_Paulo');
 
     if (!isHorarioComercial()) {
       console.log('Fora do horário comercial. Notificações não enviadas.');
       return;
     }
 
-    for (const lembrete of lembretes) { // Usar loop síncrono para evitar concorrência
+    for (const lembrete of lembretes) {
       if (lembrete.status === 'concluido') continue;
 
       const lembreteData = moment(lembrete.data).tz('America/Sao_Paulo');
@@ -59,10 +59,10 @@ const verificarVencimentosParaNotificacao = async () => {
   console.log('Verificando vencimentos para notificação...');
   try {
     const clientes = await ClienteAluguel.findAll();
-    const now = moment();
+    const now = moment().tz('America/Sao_Paulo');
 
     for (const cliente of clientes) {
-      const diaVencimento = moment().date(cliente.dia_vencimento).hour(0).minute(0).second(0);
+      const diaVencimento = moment().tz('America/Sao_Paulo').date(cliente.dia_vencimento).hour(0).minute(0).second(0);
       const diffDays = diaVencimento.diff(now, 'days');
 
       if (diffDays === 3) {
@@ -82,11 +82,10 @@ const verificarVencimentosParaNotificacao = async () => {
   }
 };
 
-// Inicia o cron job
 const startCronJobs = async () => {
   // Executa backup imediatamente ao iniciar
   try {
-    await backupDatabase(); // Corrigido para backupDatabase
+    await backupDatabase();
     console.log('Initial backup completed');
   } catch (error) {
     console.error('Initial backup failed:', error);
@@ -103,7 +102,7 @@ const startCronJobs = async () => {
   cron.schedule('0 */6 * * *', async () => {
     console.log('Executando backup a cada 6 horas...');
     try {
-      await backupDatabase(); // Corrigido para backupDatabase
+      await backupDatabase();
       console.log('Scheduled backup completed');
     } catch (error) {
       console.error('Scheduled backup failed:', error);

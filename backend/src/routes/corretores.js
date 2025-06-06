@@ -4,8 +4,8 @@ const multer = require('multer');
 const sharp = require('sharp');
 const fs = require('fs/promises');
 const path = require('path');
-const bcrypt = require('bcrypt'); // Importando bcrypt
-const { Corretor } = require('../models');
+const bcrypt = require('bcrypt');
+const { User } = require('../models'); // Atualizado para User
 
 const uploadPath = path.join(__dirname, '../uploads');
 
@@ -57,9 +57,9 @@ const deleteFile = async (fileName) => {
 // Adicione a rota para obter o corretor logado
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-      const corretor = await Corretor.findByPk(req.user.id); // Obtendo o corretor logado
-      if (corretor) {
-          res.json(corretor);
+      const user = await User.findByPk(req.user.id); // Usando User
+      if (user && user.is_corretor) {
+          res.json(user);
       } else {
           res.status(404).json({ error: 'Corretor não encontrado' });
       }
@@ -85,7 +85,7 @@ router.post('/', upload.single('photo'), async (req, res) => {
     const originalFileName = req.file.filename;
     const photo = await processImage(path.join(uploadPath, originalFileName), `${originalFileName}.webp`);
 
-    const corretor = await Corretor.create({
+    const user = await User.create({
       username,
       email,
       first_name,
@@ -95,13 +95,14 @@ router.post('/', upload.single('photo'), async (req, res) => {
       address: address || null,
       pix_account: pix_account || null,
       telefone,
-      photo
+      photo,
+      is_corretor: true // Marca como corretor
     });
 
     // Deletar o arquivo original após a criação com sucesso
     deleteFile(originalFileName);
 
-    res.status(201).json(corretor);
+    res.status(201).json(user);
   } catch (error) {
     console.error('Erro ao criar corretor:', error);
 
@@ -118,27 +119,27 @@ router.post('/', upload.single('photo'), async (req, res) => {
 router.put('/me', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
     const { first_name, email, password } = req.body;
-    const corretor = await Corretor.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id);
 
-    if (!corretor) {
+    if (!user || !user.is_corretor) {
       return res.status(404).json({ error: 'Corretor não encontrado' });
     }
 
     // Atualiza informações
-    corretor.first_name = first_name || corretor.first_name;
-    corretor.email = email || corretor.email;
+    user.first_name = first_name || user.first_name;
+    user.email = email || user.email;
 
     if (password) {
-      corretor.password = await bcrypt.hash(password, 10);
+      user.password = await bcrypt.hash(password, 10);
     }
 
     if (req.file) {
       const photo = await processImage(req.file.path);
-      corretor.photo = photo;
+      user.photo = photo;
     }
 
-    await corretor.save();
-    res.json(corretor);
+    await user.save();
+    res.json(user);
   } catch (error) {
     console.error('Erro ao atualizar corretor:', error);
     res.status(400).json({ error: error.message });

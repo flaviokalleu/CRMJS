@@ -303,11 +303,15 @@ const Sidebar = ({ open, handleDrawerClose }) => {
                 <img
                   src={
                     user?.photo
-                      ? `${apiBaseUrl}/uploads/imagem_${user?.role}/${user.photo}`
-                      : "https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=User"
+                      ? `${process.env.REACT_APP_API_URL}/uploads/imagem_${user?.role}/${user.photo}`
+                      : `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.first_name || 'default'}&backgroundColor=1d4ed8`
                   }
                   alt="User"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null; // Prevents infinite loop
+                    e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.first_name || 'default'}&backgroundColor=1d4ed8`;
+                  }}
                 />
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-blue-950"></div>

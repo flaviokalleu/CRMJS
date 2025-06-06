@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { Cliente, Corretor, Nota } = require('../models'); // Ajuste o caminho conforme necessário
-const { authenticateToken } = require('./authRoutes'); // Ajuste o caminho conforme necessário
+const { Cliente, User, Nota } = require('../models'); // Use User no lugar de Corretor
+const { authenticateToken } = require('./authRoutes');
 const { Op } = require('sequelize');
 
 // Função auxiliar para validar datas
@@ -32,16 +32,16 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Se o usuário for um corretor, busca pelo seu email
     if (userRole === 'corretor') {
-      const corretor = await Corretor.findOne({ where: { email: req.user.email } });
+      const user = await User.findOne({ where: { email: req.user.email, is_corretor: true } });
 
-      if (!corretor) {
+      if (!user) {
         return res.status(404).json({ error: 'Corretor não encontrado.' });
       }
 
-      whereConditions.corretorId = corretor.id;
+      whereConditions.userId = user.id;
 
     } else if (userRole === 'Correspondente' || userRole === 'Administrador') {
-      // Se for correspondente ou administrador, não filtra pelo corretorId
+      // Se for correspondente ou administrador, não filtra pelo userId
       if (status && status !== 'Todos') {
         whereConditions.status = status;
       }
@@ -66,8 +66,8 @@ router.get('/', authenticateToken, async (req, res) => {
       where: whereConditions,
       include: [
         {
-          model: Corretor,
-          as: 'corretor',
+          model: User,
+          as: 'user',
           attributes: ['first_name', 'last_name'],
           required: true,
         },

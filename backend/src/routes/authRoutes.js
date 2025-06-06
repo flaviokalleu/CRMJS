@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { Corretor, Correspondente, Administrador, Token } = require('../models');
+const { User, Token } = require('../models'); // Atualizado para User
 const { Op } = require('sequelize');
 const argon2 = require('argon2');
 
@@ -13,40 +13,33 @@ const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your_jwt_secret_key';
 const REFRESH_SECRET_KEY = process.env.JWT_REFRESH_SECRET_KEY || 'your_jwt_refresh_secret_key';
 
 // Definir o diretório de upload como backend/Uploads
-const UPLOAD_DIR = path.resolve(__dirname, '../Uploads'); // Resolve para backend/Uploads
+const UPLOAD_DIR = path.resolve(__dirname, '../Uploads');
 
 // Configuração do multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const userRole = req.user.role.toLowerCase(); // Obtém o papel do usuário
-    const dir = path.join(UPLOAD_DIR, `imagem_${userRole}`); // Subdiretório baseado no papel
-
-    // Verifica se o diretório existe; caso contrário, cria
+    const userRole = req.user?.role?.toLowerCase() || 'user';
+    const dir = path.join(UPLOAD_DIR, `imagem_${userRole}`);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-
-    cb(null, dir); // Define o diretório de destino
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}${path.extname(file.originalname)}`); // Nome do arquivo com timestamp
+    cb(null, `${Date.now()}${path.extname(file.originalname)}`);
   },
 });
 
 const upload = multer({ storage });
 
-// Função para buscar o usuário em todas as tabelas
+// Função para buscar o usuário na tabela User e identificar o papel
 const findUserByEmail = async (email) => {
-  let user = await Corretor.findOne({ where: { email } });
-  if (user) return { user, role: 'corretor' };
-
-  user = await Correspondente.findOne({ where: { email } });
-  if (user) return { user, role: 'Correspondente' };
-
-  user = await Administrador.findOne({ where: { email } });
-  if (user) return { user, role: 'Administrador' };
-
-  return null;
+  const user = await User.findOne({ where: { email } });
+  if (!user) return null;
+  if (user.is_corretor) return { user, role: 'Corretor' };
+  if (user.is_correspondente) return { user, role: 'Correspondente' };
+  if (user.is_administrador) return { user, role: 'Administrador' };
+  return { user, role: 'User' };
 };
 
 // Middleware para autenticar o token JWT
@@ -82,7 +75,6 @@ const generateToken = (user, role, secretKey, expiresIn) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
-  // Validação de entrada
   if (!email || !password) {
     return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
   }
@@ -118,7 +110,7 @@ router.post('/login', async (req, res) => {
       refreshToken,
       userId: user.id,
       userType: role,
-      expiresAt: new Date(Date.now() + 3600000), // Expira em 1 hora
+      expiresAt: new Date(Date.now() + 3600000),
       email: user.email || null,
       createdAt: new Date(),
       updatedAt: new Date(),

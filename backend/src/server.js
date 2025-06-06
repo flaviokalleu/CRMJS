@@ -27,7 +27,7 @@ const clienteAluguelRoutes = require('./routes/clienteAluguel');
 const requestIp = require('request-ip');
 
 // Importar o db configurado
-const db = require('./config/database');
+const { sequelize } = require('./config/database');
 
 const startCronJobs = require('./routes/cronJobs');
 
@@ -42,17 +42,12 @@ const startServer = async () => {
   const PORT = process.env.PORT || 8000;
 
   try {
-    // Verificar se db.sequelize está definido
-    if (!db.sequelize) {
-      throw new Error('Sequelize instance is not defined in database configuration');
-    }
-
     // Testar conexão com o banco de dados
-    await db.sequelize.authenticate();
+    await sequelize.authenticate();
     console.log('Database connection has been established successfully.');
 
     // Sincronizar modelos
-    await db.sequelize.sync({ alter: true }); // Use alter: true para ajustar tabelas existentes
+    await sequelize.sync({ alter: true }); // Use alter: true para ajustar tabelas existentes
     console.log('Models synchronized with the database');
 
     // Iniciar o servidor
@@ -86,7 +81,7 @@ app.use('/api/correspondente', correspondenteRoutes);
 app.use('/api/listadecorretores', listadecorretores);
 app.use('/api', notasRouter);
 app.use('/api', lembreteRoutes);
-//app.use('/api', whatsappRoutes);
+app.use('/api', whatsappRoutes);
 app.use('/api/acessos', acessosRoutes);
 app.use('/api', clienteAluguelRoutes);
 
@@ -99,4 +94,8 @@ app.use((err, req, res, next) => {
 // Iniciar o servidor
 startServer();
 
-module.exports = db.sequelize;
+// Export both the app and sequelize instance
+module.exports = {
+  app,
+  sequelize
+};

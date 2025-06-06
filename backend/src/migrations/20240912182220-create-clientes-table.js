@@ -92,11 +92,11 @@ module.exports = {
         type: Sequelize.JSON,
         allowNull: true
       },
-      corretorId: {
+      userId: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
-          model: 'corretores',
+          model: 'users',
           key: 'id'
         },
         onUpdate: 'CASCADE',

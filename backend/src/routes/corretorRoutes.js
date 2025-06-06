@@ -4,9 +4,9 @@ const multer = require('multer');
 const sharp = require('sharp');
 const fs = require('fs/promises');
 const path = require('path');
-const bcrypt = require('bcrypt'); // Importando bcrypt
-const { Corretor } = require('../models');
-const authenticateToken = require('../middleware/authMiddleware'); // Certifique-se de que o caminho está correto
+const bcrypt = require('bcrypt');
+const { User } = require('../models'); // Use User em vez de Corretor
+const authenticateToken = require('../middleware/authMiddleware');
 
 const uploadPath = path.join(__dirname, '../../uploads/imagem_corretor');
 const deletePath = path.join(uploadPath, 'deletar');
@@ -78,12 +78,12 @@ const deleteFile = async (fileName) => {
   }
 };
 
-// Adicione a rota para obter o corretor logado
+// Rota para obter o corretor logado (agora usando User e is_corretor)
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-      const corretor = await Corretor.findByPk(req.user.id); // Obtendo o corretor logado
-      if (corretor) {
-          res.json(corretor);
+      const user = await User.findOne({ where: { id: req.user.id, is_corretor: true } });
+      if (user) {
+          res.json(user);
       } else {
           res.status(404).json({ error: 'Corretor não encontrado' });
       }
@@ -97,38 +97,35 @@ router.post('/', upload.single('photo'), async (req, res) => {
   try {
     const { username, email, first_name, last_name, creci, address, pix_account, telefone, password } = req.body;
 
-    // Verifique se um arquivo foi enviado
     if (!req.file) {
       return res.status(400).json({ error: 'Por favor, envie uma imagem' });
     }
 
-    // Gerar o hash da senha usando bcrypt
-    const hashedPassword = await bcrypt.hash(password, 10); // 10 é o número de saltos
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const originalFileName = req.file.filename;
     const photo = await processImage(path.join(uploadPath, originalFileName), `${originalFileName}.webp`);
 
-    const corretor = await Corretor.create({
+    const user = await User.create({
       username,
       email,
       first_name,
       last_name,
-      password: hashedPassword,  // Armazenando a senha como hash
+      password: hashedPassword,
       creci: creci || null,
       address: address || null,
       pix_account: pix_account || null,
       telefone,
-      photo
+      photo,
+      is_corretor: true // Marca como corretor
     });
 
-    // Deletar o arquivo original após a criação com sucesso
     await deleteFile(originalFileName);
 
-    res.status(201).json(corretor);
+    res.status(201).json(user);
   } catch (error) {
     console.error('Erro ao criar corretor:', error);
 
-    // Deletar o arquivo original em caso de erro (opcional)
     if (req.file && req.file.filename) {
       await deleteFile(req.file.filename);
     }

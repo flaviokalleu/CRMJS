@@ -2,495 +2,248 @@ const express = require('express');
 const { Client } = require('whatsapp-web.js');
 const WebSocket = require('ws');
 const qrImage = require('qr-image');
-const { WhatsApp, Corretor, Cliente, Nota, Correspondente } = require('../models');
+const { WhatsApp, User, Cliente, Nota } = require('../models'); // Use User no lugar de Corretor/Correspondente
 
-/**
- * WhatsApp API Module
- * Handles WhatsApp Web client integration, authentication, and messaging
- */
+let client;
+let qrCodeData;
+let isRestarting = false;
+let isAuthenticated = false;
 
-// Global variables for tracking client state
-let client = null; // WhatsApp client instance
-let qrCodeData = null; // Current QR code for authentication
-let isRestarting = false; // Flag to prevent multiple restart attempts
-let isAuthenticated = false; // Flag to track authentication status
-
-// WebSocket server for real-time communication
+// Criação do servidor WebSocket
 const wss = new WebSocket.Server({ noServer: true });
 
-/**
- * Database Functions
- */
-
-// Initialize the database with default records if needed
-async function initializeWhatsAppRecords() {
+// Função para inicializar registros no banco de dados
+const initializeWhatsAppRecords = async () => {
   try {
-    const existingRecords = await WhatsApp.findAll();
-    if (existingRecords.length === 0) {
+    const existingRecord = await WhatsApp.findOne();
+    if (!existingRecord && isAuthenticated) {
       await WhatsApp.create({
         message: 'Mensagem padrão',
         sender: 'Seu Nome',
         receiver: 'Número do Destinatário',
-        authenticated: false,
+        authenticated: true,
+        timestamp: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
-      console.log('Registro padrão do WhatsApp criado com sucesso.');
+      console.log('Novo registro criado após autenticação.');
     }
-    return true;
+    return existingRecord;
   } catch (error) {
-    console.error('Erro ao inicializar registros do WhatsApp:', error);
-    return false;
+    console.error('Erro ao inicializar registro do WhatsApp:', error);
+    throw error;
   }
-}
+};
 
-// Get the primary WhatsApp configuration record
-async function getWhatsAppRecord() {
-  try {
-    const records = await WhatsApp.findAll();
-    return records.length > 0 ? records[0] : null;
-  } catch (error) {
-    console.error('Erro ao buscar registro do WhatsApp:', error);
-    return null;
-  }
-}
+const getWhatsAppRecord = async () => {
+  const records = await WhatsApp.findAll();
+  return records.length > 0 ? records[0] : null;
+};
 
-// Update the authentication status in the database
-async function updateAuthenticationStatus(status) {
-  try {
-    const record = await getWhatsAppRecord();
-    if (record) {
-      await WhatsApp.update(
-        { authenticated: status },
-        { where: { id: record.id } }
-      );
-      console.log(`Status de autenticação atualizado para: ${status}`);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Erro ao atualizar status de autenticação:', error);
-    return false;
-  }
-}
+const initializeWhatsAppClient = async () => {
+  await initializeWhatsAppRecords();
 
-/**
- * WhatsApp Client Functions
- */
+  client = new Client({
+    puppeteer: {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--window-size=1280,800',
+        '--disable-infobars',
+        '--disable-dev-shm-usage',
+      ],
+    },
+  });
 
-// Initialize the WhatsApp client with proper configuration
-async function initializeWhatsAppClient() {
-  if (client) {
-    console.log('Cliente já inicializado, destruindo instância anterior...');
-    await client.destroy().catch(err => console.error('Erro ao destruir cliente:', err));
-    client = null;
-  }
-
-  try {
-    await initializeWhatsAppRecords();
-
-    client = new Client({
-      puppeteer: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-gpu',
-          '--disable-software-rasterizer',
-          '--window-size=1280,800',
-          '--disable-infobars',
-          '--disable-dev-shm-usage',
-        ],
-        defaultViewport: { width: 1280, height: 800 },
-      },
-      authTimeoutMs: 60000, // 60 seconds timeout for authentication
-      qrMaxRetries: 5,      // Max retries for QR code generation
-      restartOnAuthFail: true,
-    });
-
-    // Set up event listeners
-    setupWhatsAppEventListeners();
-
-    // Initialize the client
-    await client.initialize().catch(error => {
-      console.error('Erro ao inicializar cliente WhatsApp:', error);
-      throw error;
-    });
-
-    console.log('Cliente WhatsApp inicializado com sucesso.');
-    return true;
-  } catch (error) {
-    console.error('Falha ao inicializar cliente WhatsApp:', error);
-    return false;
-  }
-}
-
-// Setup event listeners for the WhatsApp client
-function setupWhatsAppEventListeners() {
-  // QR Code generation event
   client.on('qr', async (qr) => {
     try {
       const record = await getWhatsAppRecord();
-      if (record && record.authenticated && isAuthenticated) {
-        console.log('Cliente já autenticado, QR Code ignorado.');
+      if (record && record.authenticated) {
+        console.log('Cliente já está autenticado, QR Code não gerado.');
       } else {
-        console.log('Novo QR Code gerado.');
+        console.log('QR Code gerado');
         qrCodeData = qr;
-        broadcast({ type: 'qrCode', data: qr });
+        broadcast({ qrCode: qr });
       }
     } catch (error) {
-      console.error('Erro ao processar QR Code:', error);
+      console.error('Erro ao verificar a autenticação antes de gerar o QR Code:', error);
     }
   });
 
-  // Client ready event
-  client.on('ready', async () => {
-    console.log('Cliente WhatsApp está pronto e conectado!');
+  client.on('ready', () => {
+    console.log('Cliente está pronto!');
     isAuthenticated = true;
-    await updateAuthenticationStatus(true);
-    broadcast({ type: 'status', status: 'ready' });
+    broadcast({ status: 'ready' });
   });
-  
-  // Authentication event
+
   client.on('authenticated', async () => {
-    console.log('Cliente WhatsApp autenticado com sucesso!');
+    console.log('Cliente autenticado!');
     isAuthenticated = true;
-    await updateAuthenticationStatus(true);
-    broadcast({ type: 'status', status: 'authenticated' });
+    try {
+      await initializeWhatsAppRecords();
+      broadcast({ status: 'authenticated' });
+    } catch (error) {
+      console.error('Erro ao criar registro após autenticação:', error);
+    }
   });
 
-  // Authentication failure event
-  client.on('auth_failure', async (error) => {
-    console.error('Falha na autenticação do WhatsApp:', error);
-    isAuthenticated = false;
-    await updateAuthenticationStatus(false);
-    broadcast({ type: 'status', status: 'auth_failure', error: error.message });
-  });
-
-  // Disconnection event
   client.on('disconnected', async (reason) => {
-    console.log('Cliente WhatsApp desconectado:', reason);
+    console.log('Cliente desconectado:', reason);
     isAuthenticated = false;
-    await updateAuthenticationStatus(false);
-    broadcast({ type: 'status', status: 'disconnected', reason });
-    
-    // Schedule restart after disconnection
-    setTimeout(() => restartWhatsAppClient(), 5000);
+    try {
+      await WhatsApp.destroy({ where: {}, truncate: true });
+      console.log('Registro deletado após desconexão.');
+      broadcast({ status: 'disconnected' });
+      restartWhatsAppClient();
+    } catch (error) {
+      console.error('Erro ao deletar registro após desconexão:', error);
+    }
   });
 
-  // Message received event - for future use
-  client.on('message', async (message) => {
-    console.log('Nova mensagem recebida:', message.body);
-    // Process incoming messages if needed
-  });
-}
+  client.initialize();
+};
 
-/**
- * Utility Functions
- */
-
-// Broadcast a message to all connected WebSocket clients
-function broadcast(data) {
-  if (!wss || !wss.clients) return;
-  
+const broadcast = (data) => {
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      try {
-        client.send(JSON.stringify(data));
-      } catch (error) {
-        console.error('Erro ao enviar mensagem via WebSocket:', error);
-      }
+      client.send(JSON.stringify(data));
     }
   });
-}
+};
 
-// Restart the WhatsApp client safely
-async function restartWhatsAppClient() {
-  if (isRestarting) {
-    console.log('Reinicialização já em andamento, ignorando solicitação.');
-    return false;
-  }
-  
+const restartWhatsAppClient = async () => {
+  if (isRestarting) return;
   isRestarting = true;
-  console.log('Reiniciando cliente WhatsApp...');
-  
   try {
     if (client) {
-      await client.destroy().catch(err => console.error('Erro ao destruir cliente durante reinicialização:', err));
+      console.log('Reiniciando a instância atual do cliente...');
+      await client.destroy();
       client = null;
     }
-    
-    qrCodeData = null;
-    isAuthenticated = false;
-    
-    // Wait a bit before restarting
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Reinitialize the client
-    const success = await initializeWhatsAppClient();
-    console.log(success ? 'Cliente reiniciado com sucesso.' : 'Falha ao reiniciar cliente.');
-    
-    return success;
+    const record = await getWhatsAppRecord();
+    if (record && !record.authenticated) {
+      await initializeWhatsAppClient();
+    } else {
+      console.log('Cliente já autenticado, reinicialização não necessária.');
+    }
   } catch (error) {
-    console.error('Erro crítico durante reinicialização do cliente:', error);
-    return false;
+    console.error('Erro ao reiniciar o cliente:', error);
   } finally {
     isRestarting = false;
   }
-}
+};
 
-// Send a WhatsApp message with error handling
-async function sendWhatsAppMessage(phoneNumber, message) {
-  if (!client || !isAuthenticated) {
-    throw new Error('Cliente WhatsApp não inicializado ou não autenticado.');
-  }
-  
-  try {
-    // Format the phone number correctly
-    const formattedNumber = phoneNumber.startsWith('55') ? phoneNumber : `55${phoneNumber}`;
-    const chatId = `${formattedNumber}@c.us`;
-    
-    // Send the message and await confirmation
-    const result = await client.sendMessage(chatId, message);
-    console.log(`Mensagem enviada com sucesso para ${chatId}`);
-    return result;
-  } catch (error) {
-    console.error(`Erro ao enviar mensagem para ${phoneNumber}:`, error);
-    throw error;
-  }
-}
+initializeWhatsAppClient();
 
-// Initialize the WhatsApp client on module load
-initializeWhatsAppClient().then(success => {
-  console.log(success ? 'Módulo WhatsApp iniciado com sucesso.' : 'Falha ao iniciar módulo WhatsApp.');
-});
-
-/**
- * Express Router Configuration
- */
 const router = express.Router();
 
-// GET: QR Code image for authentication
+// Rota para obter o QR Code como imagem PNG
 router.get('/qr-code', (req, res) => {
-  if (!qrCodeData) {
-    return res.status(404).json({ 
-      success: false, 
-      message: 'QR Code não disponível. Tente reiniciar o cliente.' 
-    });
-  }
-  
-  try {
-    const qrImageBuffer = qrImage.image(qrCodeData, { type: 'png', size: 8 });
+  if (qrCodeData) {
+    const qrImageBuffer = qrImage.image(qrCodeData, { type: 'png' });
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     qrImageBuffer.pipe(res);
-  } catch (error) {
-    console.error('Erro ao gerar imagem do QR Code:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erro ao gerar imagem do QR Code.' 
-    });
+  } else {
+    res.status(404).json({ message: 'QR Code não disponível ainda.' });
   }
 });
 
-// POST: Disconnect and reset the WhatsApp session
+// Rota para desconectar e deletar a sessão
 router.post('/disconnect', async (req, res) => {
   try {
     if (client) {
       await client.destroy();
-      console.log('Cliente desconectado manualmente.');
-      
-      isAuthenticated = false;
-      await updateAuthenticationStatus(false);
-      
-      // Schedule client restart
-      setTimeout(() => restartWhatsAppClient(), 2000);
-      
-      return res.json({ 
-        success: true, 
-        message: 'Desconectado com sucesso. Um novo QR Code será gerado em breve.' 
-      });
+      console.log('Cliente desconectado com sucesso.');
+      await WhatsApp.destroy({ where: {}, truncate: true });
+      console.log('Registro deletado após desconexão manual.');
+      restartWhatsAppClient();
     }
-    
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Cliente não está conectado.' 
-    });
+    res.json({ message: 'Desconectado e registro deletado com sucesso.' });
   } catch (error) {
-    console.error('Erro ao desconectar cliente:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erro ao desconectar cliente.',
-      error: error.message 
-    });
+    console.error('Erro ao desconectar:', error);
+    res.status(500).json({ message: 'Erro ao desconectar.' });
   }
 });
 
-// POST: Force restart the WhatsApp client
-router.post('/restart', async (req, res) => {
-  try {
-    const success = await restartWhatsAppClient();
-    
-    if (success) {
-      return res.json({ 
-        success: true, 
-        message: 'Cliente reiniciado com sucesso. Um novo QR Code será gerado em breve.' 
-      });
-    } else {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Falha ao reiniciar cliente.' 
-      });
-    }
-  } catch (error) {
-    console.error('Erro ao reiniciar cliente:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erro ao reiniciar cliente.',
-      error: error.message 
-    });
-  }
-});
-
-// GET: Check authentication status
+// Rota para verificar o status de autenticação
 router.get('/status', async (req, res) => {
   try {
     const record = await getWhatsAppRecord();
-    
-    // Return both the current runtime status and the database status
-    return res.json({ 
-      success: true,
-      runtimeAuthenticated: isAuthenticated,
-      dbAuthenticated: record ? record.authenticated : false,
-      clientInitialized: client !== null
-    });
+    if (record) {
+      res.json({ authenticated: record.authenticated });
+    } else {
+      res.status(404).json({ message: 'Registro não encontrado.' });
+    }
   } catch (error) {
-    console.error('Erro ao verificar status de autenticação:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erro ao verificar status de autenticação.',
-      error: error.message 
-    });
+    console.error('Erro ao verificar o status de autenticação:', error);
+    res.status(500).json({ message: 'Erro ao verificar o status de autenticação.' });
   }
 });
 
-// GET: Get corretor details for a specific client
+// Rota para buscar o corretor (User) de um cliente
 router.get('/clientes/:id/corretor', async (req, res) => {
   try {
     const clienteId = req.params.id;
-    const cliente = await Cliente.findByPk(clienteId);
+    const cliente = await Cliente.findByPk(clienteId, {
+      include: [{ model: User, as: 'user' }]
+    });
 
     if (!cliente) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Cliente não encontrado." 
-      });
+      return res.status(404).json({ message: "Cliente não encontrado." });
     }
 
-    const corretorId = cliente.corretorId;
-    if (!corretorId) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Cliente não possui corretor associado." 
-      });
+    const user = cliente.user;
+    if (!user || !user.is_corretor) {
+      return res.status(404).json({ message: "Corretor não encontrado." });
     }
 
-    const corretor = await Corretor.findByPk(corretorId);
-    if (!corretor) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Corretor não encontrado." 
-      });
-    }
-
-    return res.json({ 
-      success: true, 
-      data: corretor 
-    });
+    res.json(user);
   } catch (error) {
     console.error("Erro ao buscar corretor:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Erro ao buscar corretor.",
-      error: error.message 
-    });
+    res.status(500).json({ message: "Erro ao buscar corretor." });
   }
 });
 
-// POST: Send notification to a corretor
+// Rota para notificar o corretor (User)
 router.post('/notificar', async (req, res) => {
-  const { corretorId, status, nota } = req.body;
-
-  // Validate input
-  if (!corretorId) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'ID do corretor é obrigatório.' 
-    });
-  }
-
-  if (!status && !nota) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Status ou nota deve ser fornecido.' 
-    });
-  }
+  const { userId, status, nota } = req.body;
 
   try {
-    // Find the corretor
-    const corretor = await Corretor.findByPk(corretorId);
-    if (!corretor) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Corretor não encontrado.' 
-      });
+    const corretor = await User.findByPk(userId);
+
+    if (!corretor || !corretor.is_corretor) {
+      return res.status(404).json({ message: 'Corretor não encontrado.' });
     }
 
-    // Check if phone number exists
-    if (!corretor.telefone) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Corretor não possui telefone cadastrado.' 
-      });
-    }
-
-    // Create message content
     let message;
     if (nota) {
-      message = `Nova nota adicionada: ${nota}`;
+      message = `Nova nota adicionada para o cliente: ${nota}`;
+    } else if (status) {
+      message = `O status do cliente foi atualizado para: ${status}`;
     } else {
-      message = `Status atualizado para: ${status}`;
+      return res.status(400).json({ message: 'Nem nota nem status foram fornecidos.' });
     }
 
-    // Send the WhatsApp message
-    await sendWhatsAppMessage(corretor.telefone, message);
-
-    return res.json({ 
-      success: true, 
-      message: 'Notificação enviada com sucesso.' 
-    });
+    if (client && isAuthenticated) {
+      await client.sendMessage(`55${corretor.telefone}@c.us`, message);
+      return res.json({ message: 'Notificação enviada com sucesso.' });
+    } else {
+      return res.status(500).json({ message: 'Cliente WhatsApp não inicializado ou não está pronto.' });
+    }
   } catch (error) {
     console.error('Erro ao notificar corretor:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erro ao notificar corretor.',
-      error: error.message 
-    });
+    res.status(500).json({ message: 'Erro ao notificar corretor.' });
   }
 });
 
-// POST: Notify all correspondentes about a nota
+// Rota para notificar todos os correspondentes após uma nota
 router.post('/notificartodos', async (req, res) => {
   const { notaId } = req.body;
 
-  // Validate input
-  if (!notaId) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'ID da nota é obrigatório.' 
-    });
-  }
-
   try {
-    // Find the nota with its relationships
     const nota = await Nota.findByPk(notaId, {
       include: [
         {
@@ -498,8 +251,8 @@ router.post('/notificartodos', async (req, res) => {
           as: 'cliente',
           include: [
             {
-              model: Corretor,
-              as: 'corretor'
+              model: User,
+              as: 'user'
             }
           ]
         }
@@ -507,172 +260,54 @@ router.post('/notificartodos', async (req, res) => {
     });
 
     if (!nota) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Nota não encontrada.' 
-      });
+      return res.status(404).json({ message: 'Nota não encontrada.' });
     }
 
-    // Check if cliente exists
-    if (!nota.cliente) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Cliente não encontrado para esta nota.' 
-      });
+    const corretor = nota.cliente.user;
+    if (!corretor || !corretor.is_corretor) {
+      return res.status(404).json({ message: 'Corretor não encontrado.' });
     }
 
-    // Check if corretor exists
-    const corretor = nota.cliente.corretor;
-    if (!corretor) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Corretor não encontrado para este cliente.' 
-      });
-    }
-
-    // Create notification message
     const mensagem = `O corretor ${corretor.first_name} ${corretor.last_name} informou que a nota do cliente ${nota.destinatario} foi concluída.`;
 
-    // Find all correspondentes
-    const correspondentes = await Correspondente.findAll();
-    if (correspondentes.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Nenhum correspondente encontrado para notificar.' 
-      });
-    }
+    // Busca todos os correspondentes (User)
+    const correspondentes = await User.findAll({ where: { is_correspondente: true } });
 
-    // Send notifications to all correspondentes
-    const sentResults = [];
     for (const correspondente of correspondentes) {
-      if (!correspondente.phone) {
-        console.warn(`Correspondente ID ${correspondente.id} não possui telefone cadastrado.`);
-        continue;
-      }
-      
-      try {
-        await sendWhatsAppMessage(correspondente.phone, mensagem);
-        sentResults.push({
-          id: correspondente.id,
-          status: 'success'
-        });
-      } catch (error) {
-        console.error(`Erro ao enviar para correspondente ID ${correspondente.id}:`, error);
-        sentResults.push({
-          id: correspondente.id,
-          status: 'failed',
-          error: error.message
-        });
+      if (client && isAuthenticated) {
+        await client.sendMessage(`55${correspondente.telefone}@c.us`, mensagem);
       }
     }
 
-    return res.json({ 
-      success: true, 
-      message: 'Notificações processadas.',
-      results: sentResults
-    });
+    res.json({ message: 'Notificações enviadas com sucesso.' });
   } catch (error) {
-    console.error('Erro ao notificar correspondentes:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erro ao notificar correspondentes.',
-      error: error.message 
-    });
+    console.error('Erro ao notificar todos os correspondentes:', error);
+    res.status(500).json({ message: 'Erro ao notificar todos os correspondentes.' });
   }
 });
 
-// POST: Notify correspondentes about new client
+// Rota para notificar todos os correspondentes após cadastrar um cliente
 router.post('/notificarCorrespondentes', async (req, res) => {
   const { clienteNome } = req.body;
 
-  // Validate input
-  if (!clienteNome) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Nome do cliente é obrigatório.' 
-    });
-  }
-
   try {
-    // Find all correspondentes
-    const correspondentes = await Correspondente.findAll();
-    if (correspondentes.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Nenhum correspondente encontrado para notificar.' 
-      });
-    }
-
-    // Create notification message
     const mensagem = `Novo cliente cadastrado: ${clienteNome}.`;
 
-    // Send notifications to all correspondentes
-    const sentResults = [];
+    const correspondentes = await User.findAll({ where: { is_correspondente: true } });
+
     for (const correspondente of correspondentes) {
-      if (!correspondente.phone) {
-        console.warn(`Correspondente ID ${correspondente.id} não possui telefone cadastrado.`);
-        continue;
-      }
-      
-      try {
-        await sendWhatsAppMessage(correspondente.phone, mensagem);
-        sentResults.push({
-          id: correspondente.id,
-          status: 'success'
-        });
-      } catch (error) {
-        console.error(`Erro ao enviar para correspondente ID ${correspondente.id}:`, error);
-        sentResults.push({
-          id: correspondente.id,
-          status: 'failed',
-          error: error.message
-        });
+      if (client && isAuthenticated) {
+        await client.sendMessage(`55${correspondente.telefone}@c.us`, mensagem);
       }
     }
 
-    return res.json({ 
-      success: true, 
-      message: 'Notificações de novo cliente processadas.',
-      results: sentResults
-    });
+    res.json({ message: 'Notificações enviadas com sucesso para os correspondentes.' });
   } catch (error) {
-    console.error('Erro ao notificar correspondentes sobre novo cliente:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Erro ao notificar correspondentes sobre novo cliente.',
-      error: error.message 
-    });
+    console.error('Erro ao notificar correspondentes:', error);
+    res.status(500).json({ message: 'Erro ao notificar correspondentes.' });
   }
 });
 
-// WebSocket connection handler
-wss.on('connection', (ws) => {
-  console.log('Nova conexão WebSocket estabelecida.');
-  
-  // Send initial status to the new connection
-  ws.send(JSON.stringify({ 
-    type: 'status', 
-    status: isAuthenticated ? 'authenticated' : 'disconnected',
-    qrAvailable: qrCodeData !== null
-  }));
-  
-  // Handle WebSocket messages
-  ws.on('message', (data) => {
-    try {
-      const message = JSON.parse(data);
-      console.log('Mensagem WebSocket recebida:', message);
-      
-      // Process WebSocket commands here if needed
-    } catch (error) {
-      console.error('Erro ao processar mensagem WebSocket:', error);
-    }
-  });
-  
-  // Handle WebSocket disconnection
-  ws.on('close', () => {
-    console.log('Conexão WebSocket encerrada.');
-  });
-});
-
-// Export the router and the WebSocket server
-module.exports = { router, wss };
+module.exports = router;
+module.exports.client = client;
+module.exports.isAuthenticated = isAuthenticated;

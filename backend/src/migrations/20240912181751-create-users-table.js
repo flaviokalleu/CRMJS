@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('corretores', {
+    await queryInterface.createTable('users', {
       id: {
         type: Sequelize.INTEGER,
         autoIncrement: true,
@@ -23,7 +23,8 @@ module.exports = {
       },
       email: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: false,
+        unique: true
       },
       telefone: {
         type: Sequelize.STRING,
@@ -31,7 +32,7 @@ module.exports = {
       },
       password: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: false
       },
       creci: {
         type: Sequelize.STRING,
@@ -49,6 +50,21 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true
       },
+      is_corretor: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
+      is_administrador: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
+      is_correspondente: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -63,6 +79,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('corretores');
+    await queryInterface.dropTable('users');
   }
 };

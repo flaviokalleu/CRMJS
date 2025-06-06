@@ -21,17 +21,9 @@ module.exports = {
       timestamp: {
         type: Sequelize.DATE
       },
-      corretorId: {
+      userId: {
         type: Sequelize.INTEGER,
-        references: { model: 'corretores', key: 'id' }
-      },
-      correspondenteId: {
-        type: Sequelize.INTEGER,
-        references: { model: 'correspondents', key: 'id' }
-      },
-      administradorId: {
-        type: Sequelize.INTEGER,
-        references: { model: 'administradors', key: 'id' }
+        references: { model: 'users', key: 'id' }
       },
       createdAt: {
         type: Sequelize.DATE,

@@ -4,8 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const router = express.Router();
-const { Administrador } = require('../models');
-const { authenticateToken } = require('./authRoutes'); // Importando o middleware de autenticação
+const { User } = require('../models'); // Atualizado para User
+const { authenticateToken } = require('./authRoutes');
 
 // Configuração do multer para o upload de imagens
 const storage = multer.diskStorage({
@@ -22,7 +22,7 @@ const upload = multer({ storage });
 // Rota para obter informações do administrador autenticado
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const admin = await Administrador.findByPk(req.user.id);
+    const admin = await User.findOne({ where: { id: req.user.id, is_administrador: true } });
     if (!admin) return res.status(404).json({ error: 'Administrador não encontrado' });
     res.json(admin);
   } catch (error) {
@@ -35,7 +35,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 router.put('/me', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
     const { first_name, email, password } = req.body;
-    const admin = await Administrador.findByPk(req.user.id);
+    const admin = await User.findOne({ where: { id: req.user.id, is_administrador: true } });
 
     if (!admin) {
       return res.status(404).json({ error: 'Administrador não encontrado' });

@@ -1,7 +1,7 @@
 'use strict';
-const { Model, DataTypes, Sequelize } = require('sequelize');
+const { Model } = require('sequelize');
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   class Nota extends Model {
     static associate(models) {
       // Associação de Nota com Cliente (muitos para um)
@@ -13,59 +13,28 @@ module.exports = (sequelize) => {
   }
 
   Nota.init({
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true, // Define o ID como autoincrementado
-      primaryKey: true,    // Define o ID como chave primária
-    },
     cliente_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'clientes', // Nome da tabela associada
-        key: 'id'
-      }
+      allowNull: false
     },
-    processoId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
+    processo_id: DataTypes.INTEGER,
     nova: {
       type: DataTypes.BOOLEAN,
-      allowNull: true,
+      defaultValue: true
     },
-    destinatario: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    texto: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    data_criacao: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
+    destinatario: DataTypes.STRING,
+    texto: DataTypes.TEXT,
+    data_criacao: DataTypes.DATE,
     criado_por_id: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    createdat: {
-      type: DataTypes.DATE,
-      defaultValue: Sequelize.NOW
-    },
-    updatedat: {
-      type: DataTypes.DATE,
-      defaultValue: Sequelize.NOW
+      type: DataTypes.INTEGER,
+      allowNull: true
     }
-  }, 
-  {
+  }, {
     sequelize,
     modelName: 'Nota',
     tableName: 'notas',
-    timestamps: true, // Isso gerará automaticamente as colunas createdAt e updatedAt
-    createdAt: 'createdat', // Nome da coluna para a data de criação
-    updatedAt: 'updatedat'  // Nome da coluna para a data de atualização
+    underscored: true,
+    timestamps: true
   });
 
   return Nota;

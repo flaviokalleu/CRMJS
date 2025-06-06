@@ -4,15 +4,15 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class Cliente extends Model {
     static associate(models) {
-      // Associação de Cliente com Corretor (muitos para um)
-      Cliente.belongsTo(models.Corretor, {
-        foreignKey: 'corretorId',
-        as: 'corretor'
+      // Associação de Cliente com User (muitos para um)
+      Cliente.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user'
       });
       
       // Associação de Cliente com Nota (um para muitos)
       Cliente.hasMany(models.Nota, {
-        foreignKey: 'cliente_id', // Usando `cliente_id` como chave estrangeira
+        foreignKey: 'cliente_id',
         as: 'notas'
       });
     }
@@ -97,14 +97,22 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       defaultValue: 'aguardando_aprovação'
     },
-    
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    }
   }, {
     sequelize,
     modelName: 'Cliente',
     tableName: 'clientes',
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    updatedAt: 'updated_at',
+    underscored: true
   });
 
   return Cliente;

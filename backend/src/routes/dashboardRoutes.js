@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const { Corretor, Cliente, Correspondente } = require('../models');
+const { User, Cliente } = require('../models'); // Use apenas User e Cliente
 const Sequelize = require('sequelize');
 const { Op, fn, col } = Sequelize;
 const literal = Sequelize.literal;
@@ -12,24 +12,26 @@ router.use(authMiddleware);
 router.get('/', async (req, res) => {
     try {
         const userRole = req.user.role; // Assumindo que a role do usuário está disponível em req.user
-        const corretor = await Corretor.findOne({ where: { email: req.user.email } });
+        const user = await User.findOne({ where: { email: req.user.email } });
 
         // Condição para filtrar dados com base na role
         let whereCondition = {};
-        if (userRole === 'corretor' && corretor) {
-            whereCondition = { corretorId: corretor.id };
+        if (userRole === 'corretor' && user && user.is_corretor) {
+            whereCondition = { userId: user.id };
         } else if (userRole === 'Administrador' || userRole === 'Correspondente') {
             whereCondition = {}; // Acesso total para administradores e correspondentes
         }
 
         // Contar o número total de corretores
-        const totalCorretores = userRole === 'corretor' ? 1 : await Corretor.count();
+        const totalCorretores = userRole === 'corretor'
+            ? 1
+            : await User.count({ where: { is_corretor: true } });
 
         // Contar o número total de clientes
         const totalClientes = await Cliente.count({ where: whereCondition });
 
         // Contar o número total de correspondentes
-        const totalCorrespondentes = await Correspondente.count();
+        const totalCorrespondentes = await User.count({ where: { is_correspondente: true } });
 
         // Contar o número de clientes cadastrados este mês
         const clientesEsteMes = await Cliente.count({
@@ -46,29 +48,30 @@ router.get('/', async (req, res) => {
             ? []
             : await Cliente.findAll({
                 attributes: [
-                    'corretorId',
-                    [fn('COUNT', col('corretorId')), 'clients']
+                    'userId',
+                    [fn('COUNT', col('userId')), 'clients']
                 ],
                 include: [
                     {
-                        model: Corretor,
+                        model: User,
                         attributes: ['id', 'first_name', 'last_name', 'photo'],
-                        as: 'corretor'
+                        as: 'user',
+                        where: { is_corretor: true }
                     }
                 ],
-                group: ['corretorId', 'corretor.id', 'corretor.first_name', 'corretor.last_name', 'corretor.photo'],
-                order: [[fn('COUNT', col('corretorId')), 'DESC']],
+                group: ['userId', 'user.id', 'user.first_name', 'user.last_name', 'user.photo'],
+                order: [[fn('COUNT', col('userId')), 'DESC']],
                 limit: 5
             });
 
         // Ajustar corretores que possam ter 'null' como valor em 'photo'
         const top5CorretoresAdjusted = top5Corretores.map(corretorData => {
-            const corretor = corretorData.corretor || {};
+            const user = corretorData.user || {};
             return {
                 ...corretorData.toJSON(),
-                corretor: {
-                    ...corretor,
-                    photo: corretor.photo || '/path/to/default/photo.jpg', // Foto padrão
+                user: {
+                    ...user,
+                    photo: user.photo || '/path/to/default/photo.jpg', // Foto padrão
                 }
             };
         });
@@ -111,11 +114,11 @@ router.get('/clientes', async (req, res) => {
 router.get('/monthly', async (req, res) => {
     try {
         const userRole = req.user.role;
-        const corretor = await Corretor.findOne({ where: { email: req.user.email } });
+        const user = await User.findOne({ where: { email: req.user.email } });
 
         let whereCondition = {};
-        if (userRole === 'corretor' && corretor) {
-            whereCondition = { corretorId: corretor.id };
+        if (userRole === 'corretor' && user && user.is_corretor) {
+            whereCondition = { userId: user.id };
         }
 
         // Obter o número de clientes cadastrados por mês
@@ -156,11 +159,11 @@ router.get('/monthly', async (req, res) => {
 router.get('/weekly', async (req, res) => {
     try {
         const userRole = req.user.role;
-        const corretor = await Corretor.findOne({ where: { email: req.user.email } });
+        const user = await User.findOne({ where: { email: req.user.email } });
 
         let whereCondition = {};
-        if (userRole === 'corretor' && corretor) {
-            whereCondition = { corretorId: corretor.id };
+        if (userRole === 'corretor' && user && user.is_corretor) {
+            whereCondition = { userId: user.id };
         }
 
         // Obter o número de clientes cadastrados por dia da semana

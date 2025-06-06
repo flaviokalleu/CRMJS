@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
             geoRegion: geo.region || null,
             geoCountry: geo.country || null,
             timestamp: new Date(),
-            corretorId: role === 'corretor' ? userEmail : null,
+            userId: role === 'corretor' ? userEmail : null,
             correspondenteId: role === 'correspondente' ? userEmail : null,
             administradorId: role === 'administrador' ? userEmail : null,
         });

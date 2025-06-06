@@ -1,35 +1,34 @@
 'use strict';
+const bcrypt = require('bcryptjs');
 
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      // Verificar se a tabela administradors existe
-      const tableExists = await queryInterface.tableExists('administradors');
-      if (!tableExists) {
-        console.error('Tabela administradors não existe.');
-        return;
-      }
-
-      // Inserir dados com os nomes de colunas corretos
-      await queryInterface.bulkInsert('administradors', [{
+      const adminData = {
         username: 'admin',
-        first_name: 'Admin', // Corrigido de first_Name para firstname
-        last_name: 'User',   // Corrigido de last_Name para lastname
+        first_name: 'Admin',
+        last_name: 'User',
         email: 'admin@admin.com',
-        phone: '1234567890',
-        password: Buffer.from('admin').toString('base64'), // Codificando a senha em Base64
+        telefone: '1234567890',
+        password: await bcrypt.hash('admin', 10),
         address: '123 Admin St',
         pix_account: '123456',
         photo: 'admin.jpg',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }], {});
+        is_administrador: true,
+        is_corretor: false,
+        is_correspondente: false,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      await queryInterface.bulkInsert('users', [adminData], {});
     } catch (error) {
       console.error('Erro ao inserir dados no seeder:', error);
+      throw error;
     }
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('administradors', null, {});
+    await queryInterface.bulkDelete('users', { email: 'admin@admin.com' }, {});
   }
 };
