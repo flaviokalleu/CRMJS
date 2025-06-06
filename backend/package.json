@@ -33,6 +33,7 @@
     "express": "^4.19.2",
     "express-busboy": "^10.1.0",
     "firebase": "^10.13.2",
+    "formidable": "^3.5.4",
     "fs-extra": "^11.2.0",
     "geoip-lite": "^1.4.10",
     "googleapis": "^144.0.0",

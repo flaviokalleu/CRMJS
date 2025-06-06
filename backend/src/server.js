@@ -34,34 +34,15 @@ const startCronJobs = require('./routes/cronJobs');
 const app = express();
 app.use(requestIp.mw());
 app.use(cors());
+
+// ===== ROTAS DE UPLOAD PRIMEIRO =====
+app.use('/api/corretor', corretorRoutes);
+
+// ===== BODY PARSER DEPOIS =====
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Função para iniciar o servidor
-const startServer = async () => {
-  const PORT = process.env.PORT || 8000;
-
-  try {
-    // Testar conexão com o banco de dados
-    await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
-
-    // Sincronizar modelos
-    await sequelize.sync({ alter: true }); // Use alter: true para ajustar tabelas existentes
-    console.log('Models synchronized with the database');
-
-    // Iniciar o servidor
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      startCronJobs();
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1); // Encerra o processo se a conexão falhar
-  }
-};
-
-// Definindo as rotas
+// ===== OUTRAS ROTAS =====
 app.use('/api/uploads', express.static(path.join(__dirname, '../Uploads')));
 app.use('/api', configurationsRoute);
 app.use('/api', clienteRoutes);
@@ -76,7 +57,7 @@ app.use('/notas', notasRoutes);
 app.use('/api/imoveis', imoveisRouter);
 app.use('/api/protected', protectedRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/corretor', corretorRoutes);
+// app.use('/api/corretor', corretorRoutes); // <-- Remova esta linha duplicada se existir
 app.use('/api/correspondente', correspondenteRoutes);
 app.use('/api/listadecorretores', listadecorretores);
 app.use('/api', notasRouter);
@@ -92,7 +73,11 @@ app.use((err, req, res, next) => {
 });
 
 // Iniciar o servidor
-startServer();
+const PORT = process.env.PORT || 8000;
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
 
 // Export both the app and sequelize instance
 module.exports = {

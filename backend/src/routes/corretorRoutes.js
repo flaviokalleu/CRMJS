@@ -1,326 +1,232 @@
 const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const sharp = require('sharp');
-const fs = require('fs/promises');
 const path = require('path');
+const fs = require('fs').promises;
 const bcrypt = require('bcrypt');
 const { User } = require('../models');
+const { Op } = require('sequelize');
 const authenticateToken = require('../middleware/authMiddleware');
+const formidable = require('formidable');
 
-// Configuração de caminhos
-const uploadPath = path.join(__dirname, '../../uploads/imagem_corretor');
-const deletePath = path.join(uploadPath, 'deletar');
+const router = express.Router();
 
-// Criar diretórios se não existirem
-const initializeDirectories = async () => {
-  try {
-    await fs.mkdir(uploadPath, { recursive: true });
-    await fs.mkdir(deletePath, { recursive: true });
-    console.log('Diretórios de upload criados com sucesso');
-  } catch (error) {
-    console.error('Erro ao criar diretórios:', error);
-  }
-};
+const uploadDir = path.join(__dirname, '../../uploads/corretor');
 
-// Inicializar diretórios
-initializeDirectories();
+// Garante que o diretório existe
+fs.mkdir(uploadDir, { recursive: true });
 
-// Configuração do Multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}_${Math.round(Math.random() * 1E9)}_${file.originalname}`;
-    cb(null, uniqueName);
-  }
-});
-
-// Filtro para aceitar apenas imagens
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff'];
-  
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Apenas arquivos de imagem são permitidos! (JPEG, PNG, GIF, WebP, BMP, TIFF)'), false);
-  }
-};
-
-// Configuração do upload
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-    files: 1
-  }
-});
-
-// Função para processar imagem
-const processImage = async (inputPath, outputFileName) => {
-  try {
-    const outputPath = path.join(uploadPath, outputFileName);
-    
-    await sharp(inputPath)
-      .resize({ 
-        width: 800, 
-        height: 800, 
-        fit: 'inside',
-        withoutEnlargement: true 
-      })
-      .webp({ 
-        quality: 85,
-        effort: 4
-      })
-      .toFile(outputPath);
-
-    console.log(`Imagem processada: ${outputFileName}`);
-    return outputFileName;
-  } catch (error) {
-    console.error('Erro ao processar imagem:', error);
-    throw new Error('Falha ao processar a imagem');
-  }
-};
-
-// Função para deletar arquivo
-const deleteFile = async (fileName) => {
-  if (!fileName) return;
-  
-  const filePath = path.join(uploadPath, fileName);
-  
-  try {
-    await fs.access(filePath);
-    await fs.unlink(filePath);
-    console.log(`Arquivo deletado: ${fileName}`);
-  } catch (error) {
-    console.error(`Erro ao deletar arquivo ${fileName}:`, error);
-    
-    // Tentar mover para pasta de deletar
-    try {
-      const destinationPath = path.join(deletePath, fileName);
-      await fs.rename(filePath, destinationPath);
-      console.log(`Arquivo movido para pasta de deletar: ${fileName}`);
-    } catch (moveError) {
-      console.error(`Erro ao mover arquivo para deletar: ${moveError}`);
-    }
-  }
-};
-
-// Função para validar dados do corretor
 const validateCorretorData = (data) => {
-  const { username, email, first_name, last_name, telefone, password } = data;
   const errors = [];
+  const username = Array.isArray(data.username) ? data.username[0] : data.username;
+  const email = Array.isArray(data.email) ? data.email[0] : data.email;
+  const first_name = Array.isArray(data.first_name) ? data.first_name[0] : data.first_name;
+  const last_name = Array.isArray(data.last_name) ? data.last_name[0] : data.last_name;
+  const telefone = Array.isArray(data.telefone) ? data.telefone[0] : data.telefone;
+  const password = Array.isArray(data.password) ? data.password[0] : data.password;
 
-  if (!username || username.trim().length < 3) {
-    errors.push('Username deve ter pelo menos 3 caracteres');
-  }
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.push('Email inválido');
-  }
-
-  if (!first_name || first_name.trim().length < 2) {
-    errors.push('Nome deve ter pelo menos 2 caracteres');
-  }
-
-  if (!last_name || last_name.trim().length < 2) {
-    errors.push('Sobrenome deve ter pelo menos 2 caracteres');
-  }
-
-  if (!telefone || telefone.trim().length < 10) {
-    errors.push('Telefone deve ter pelo menos 10 caracteres');
-  }
-
-  if (!password || password.length < 6) {
-    errors.push('Senha deve ter pelo menos 6 caracteres');
-  }
-
+  if (!username || username.trim().length < 3) errors.push('Username deve ter pelo menos 3 caracteres');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Email deve ser válido');
+  if (!first_name || first_name.trim().length < 2) errors.push('Nome deve ter pelo menos 2 caracteres');
+  if (!last_name || last_name.trim().length < 2) errors.push('Sobrenome deve ter pelo menos 2 caracteres');
+  if (!telefone || telefone.trim().length < 10) errors.push('Telefone deve ter pelo menos 10 dígitos');
+  if (!password || password.length < 6) errors.push('Senha deve ter pelo menos 6 caracteres');
   return errors;
 };
 
-// ROTAS
+// ==================== ROTAS ====================
 
-// Obter dados do corretor logado
+// GET /corretor/me - Obter dados do corretor logado
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({
+    const corretor = await User.findOne({
       where: { 
         id: req.user.id, 
         is_corretor: true 
       },
       attributes: [
-        'id', 'username', 'email', 'first_name', 'last_name', 
-        'creci', 'address', 'pix_account', 'telefone', 'photo', 
-        'is_corretor', 'createdAt'
+        'id', 'username', 'email', 'first_name', 'last_name',
+        'creci', 'address', 'pix_account', 'telefone', 'photo',
+        'created_at'
       ]
     });
 
-    if (!user) {
-      return res.status(404).json({ 
-        error: 'Corretor não encontrado ou não autorizado' 
+    if (!corretor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Corretor não encontrado'
       });
     }
 
     res.json({
       success: true,
-      data: user
+      data: corretor
     });
 
   } catch (error) {
-    console.error('Erro ao obter dados do corretor:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    console.error('❌ Erro ao buscar corretor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
     });
   }
 });
 
-// Criar novo corretor
-router.post('/', upload.single('photo'), async (req, res) => {
-  let uploadedFileName = null;
-
-  try {
-    // Validar se arquivo foi enviado
-    if (!req.file) {
-      return res.status(400).json({ 
-        error: 'Por favor, envie uma imagem do corretor' 
-      });
+// POST /corretor - Criar novo corretor usando formidable (apenas upload, sem tratar imagem)
+router.post('/', async (req, res) => {
+  console.log('[BACKEND] Recebendo POST /corretor');
+  const form = new formidable.IncomingForm({
+    multiples: false,
+    maxFileSize: 10 * 1024 * 1024,
+    uploadDir,
+    keepExtensions: true,
+    filename: (name, ext, part, form) => {
+      // Gera um nome único para o arquivo
+      const timestamp = Date.now();
+      const safeName = part.originalFilename.replace(/\s+/g, '_');
+      return `${timestamp}_${safeName}`;
     }
+  });
 
-    uploadedFileName = req.file.filename;
-    const { username, email, first_name, last_name, creci, address, pix_account, telefone, password } = req.body;
+  form.on('fileBegin', (name, file) => {
+    console.log(`[BACKEND] Iniciando upload do arquivo: ${file.originalFilename}`);
+  });
 
-    // Validar dados
-    const validationErrors = validateCorretorData(req.body);
-    if (validationErrors.length > 0) {
-      await deleteFile(uploadedFileName);
-      return res.status(400).json({ 
-        error: 'Dados inválidos',
-        details: validationErrors
-      });
-    }
+  form.on('progress', (bytesReceived, bytesExpected) => {
+    console.log(`[BACKEND] Progresso: ${bytesReceived}/${bytesExpected}`);
+  });
 
-    // Verificar se email ou username já existem
-    const existingUser = await User.findOne({
-      where: {
-        $or: [
-          { email: email.toLowerCase() },
-          { username: username.toLowerCase() }
-        ]
+  form.on('error', (err) => {
+    console.error('[BACKEND] Erro no formidable:', err);
+  });
+
+  form.parse(req, async (err, fields, files) => {
+    console.log('[BACKEND] Callback do formidable chamado');
+    let uploadedFilePath = null;
+    try {
+      if (err) {
+        console.error('[BACKEND] Erro no parse:', err);
+        return res.status(400).json({ success: false, message: 'Erro ao processar upload', details: err.message });
       }
-    });
 
-    if (existingUser) {
-      await deleteFile(uploadedFileName);
-      return res.status(409).json({ 
-        error: 'Email ou username já cadastrado' 
-      });
-    }
+      console.log('[BACKEND] Fields recebidos:', fields);
+      console.log('[BACKEND] Files recebidos:', files);
 
-    // Processar imagem
-    const processedImageName = `${Date.now()}_corretor.webp`;
-    await processImage(
-      path.join(uploadPath, uploadedFileName),
-      processedImageName
-    );
-
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Criar corretor
-    const newCorretor = await User.create({
-      username: username.toLowerCase().trim(),
-      email: email.toLowerCase().trim(),
-      first_name: first_name.trim(),
-      last_name: last_name.trim(),
-      password: hashedPassword,
-      creci: creci ? creci.trim() : null,
-      address: address ? address.trim() : null,
-      pix_account: pix_account ? pix_account.trim() : null,
-      telefone: telefone.trim(),
-      photo: processedImageName,
-      is_corretor: true
-    });
-
-    // Deletar arquivo original
-    await deleteFile(uploadedFileName);
-
-    // Resposta de sucesso (sem senha)
-    res.status(201).json({
-      success: true,
-      message: 'Corretor criado com sucesso',
-      data: {
-        id: newCorretor.id,
-        username: newCorretor.username,
-        email: newCorretor.email,
-        first_name: newCorretor.first_name,
-        last_name: newCorretor.last_name,
-        creci: newCorretor.creci,
-        address: newCorretor.address,
-        pix_account: newCorretor.pix_account,
-        telefone: newCorretor.telefone,
-        photo: newCorretor.photo,
-        is_corretor: newCorretor.is_corretor,
-        createdAt: newCorretor.createdAt
+      if (!files.photo) {
+        console.warn('[BACKEND] Nenhuma foto enviada');
+        return res.status(400).json({ success: false, message: 'Foto é obrigatória' });
       }
-    });
 
-  } catch (error) {
-    console.error('Erro ao criar corretor:', error);
+      // CORREÇÃO: Acessar o primeiro elemento do array
+      const photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
+      uploadedFilePath = photoFile.filepath;
+      console.log('[BACKEND] Caminho do arquivo salvo:', uploadedFilePath);
 
-    // Limpar arquivo em caso de erro
-    if (uploadedFileName) {
-      await deleteFile(uploadedFileName);
-    }
+      // EXTRAIR VALORES DOS ARRAYS LOGO NO INÍCIO
+      const username = Array.isArray(fields.username) ? fields.username[0] : fields.username;
+      const email = Array.isArray(fields.email) ? fields.email[0] : fields.email;
+      const first_name = Array.isArray(fields.first_name) ? fields.first_name[0] : fields.first_name;
+      const last_name = Array.isArray(fields.last_name) ? fields.last_name[0] : fields.last_name;
+      const telefone = Array.isArray(fields.telefone) ? fields.telefone[0] : fields.telefone;
+      const password = Array.isArray(fields.password) ? fields.password[0] : fields.password;
+      const creci = Array.isArray(fields.creci) ? fields.creci[0] : fields.creci;
+      const address = Array.isArray(fields.address) ? fields.address[0] : fields.address;
+      const pix_account = Array.isArray(fields.pix_account) ? fields.pix_account[0] : fields.pix_account;
 
-    // Tratar erros específicos do Sequelize
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(409).json({ 
-        error: 'Email ou username já cadastrado' 
+      // AGORA USE AS VARIÁVEIS EXTRAÍDAS
+      const validationErrors = validateCorretorData({
+        username,
+        email,
+        first_name,
+        last_name,
+        telefone,
+        password
       });
-    }
+      
+      if (validationErrors.length > 0) {
+        console.warn('[BACKEND] Erros de validação:', validationErrors);
+        await fs.unlink(uploadedFilePath);
+        return res.status(400).json({ success: false, message: 'Dados inválidos', errors: validationErrors });
+      }
 
-    if (error.name === 'SequelizeValidationError') {
-      return res.status(400).json({ 
-        error: 'Dados de validação inválidos',
-        details: error.errors.map(err => err.message)
+      console.log('[BACKEND] Verificando usuário existente...');
+      const existingUser = await User.findOne({
+        where: {
+          [Op.or]: [
+            { email: email.toLowerCase().trim() }, // AGORA É STRING
+            { username: username.toLowerCase().trim() } // AGORA É STRING
+          ]
+        }
       });
-    }
+      
+      if (existingUser) {
+        console.warn('[BACKEND] Usuário já existe');
+        await fs.unlink(uploadedFilePath);
+        return res.status(409).json({ success: false, message: 'Email ou username já está em uso' });
+      }
 
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
+      console.log('[BACKEND] Gerando hash da senha...');
+      const hashedPassword = await bcrypt.hash(password, 10); // AGORA É STRING
+
+      console.log('[BACKEND] Salvando corretor no banco...');
+      const newCorretor = await User.create({
+        username: username.toLowerCase().trim(),
+        email: email.toLowerCase().trim(),
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        password: hashedPassword,
+        creci: creci ? creci.trim() : null,
+        address: address ? address.trim() : null,
+        pix_account: pix_account ? pix_account.trim() : null,
+        telefone: telefone.trim(),
+        photo: path.basename(photoFile.filepath), // AGORA VAI FUNCIONAR
+        is_corretor: true
+      });
+
+      const { password: _, ...corretorData } = newCorretor.toJSON();
+
+      console.log('[BACKEND] Corretor criado com sucesso:', corretorData.id);
+
+      res.status(201).json({
+        success: true,
+        message: 'Corretor criado com sucesso',
+        data: corretorData
+      });
+
+    } catch (error) {
+      console.error('[BACKEND] Erro inesperado:', error);
+      if (uploadedFilePath) {
+        await fs.unlink(uploadedFilePath).catch(() => {});
+      }
+      res.status(500).json({ success: false, message: 'Erro interno do servidor', details: error.message });
+    }
+  });
 });
 
-// Listar todos os corretores (admin)
+// GET /corretor - Listar corretores (com paginação e busca)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
+    const { page = 1, limit = 10, search = '' } = req.query;
     const offset = (page - 1) * limit;
 
     const whereClause = { is_corretor: true };
-    
-    if (search) {
-      whereClause.$or = [
-        { first_name: { $iLike: `%${search}%` } },
-        { last_name: { $iLike: `%${search}%` } },
-        { email: { $iLike: `%${search}%` } },
-        { username: { $iLike: `%${search}%` } }
+
+    // Adicionar busca se fornecida
+    if (search.trim()) {
+      whereClause[Op.or] = [
+        { first_name: { [Op.iLike]: `%${search}%` } },
+        { last_name: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+        { username: { [Op.iLike]: `%${search}%` } }
       ];
     }
 
     const { count, rows: corretores } = await User.findAndCountAll({
       where: whereClause,
       attributes: [
-        'id', 'username', 'email', 'first_name', 'last_name', 
-        'creci', 'address', 'pix_account', 'telefone', 'photo', 
-        'is_corretor', 'createdAt'
+        'id', 'username', 'email', 'first_name', 'last_name',
+        'creci', 'address', 'pix_account', 'telefone', 'photo',
+        'created_at'
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
@@ -337,38 +243,50 @@ router.get('/', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro ao listar corretores:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    console.error('❌ Erro ao listar corretores:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
     });
   }
 });
 
-// Middleware de tratamento de erros para multer
-router.use((error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ 
-        error: 'Arquivo muito grande. Máximo permitido: 5MB' 
+// GET /corretor/:id - Obter corretor específico
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const corretor = await User.findOne({
+      where: { 
+        id: id, 
+        is_corretor: true 
+      },
+      attributes: [
+        'id', 'username', 'email', 'first_name', 'last_name',
+        'creci', 'address', 'pix_account', 'telefone', 'photo',
+        'created_at'
+      ]
+    });
+
+    if (!corretor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Corretor não encontrado'
       });
     }
-    if (error.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({ 
-        error: 'Muitos arquivos. Envie apenas uma imagem' 
-      });
-    }
-  }
-  
-  if (error.message.includes('Apenas arquivos de imagem')) {
-    return res.status(400).json({ 
-      error: error.message 
+
+    res.json({
+      success: true,
+      data: corretor
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao buscar corretor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
     });
   }
-
-  res.status(500).json({ 
-    error: 'Erro no upload do arquivo' 
-  });
 });
 
 module.exports = router;
