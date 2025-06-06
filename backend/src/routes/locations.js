@@ -32,4 +32,6 @@ router.get('/municipios/:estadoId', async (req, res) => {
   }
 });
 
+
+
 module.exports = router;

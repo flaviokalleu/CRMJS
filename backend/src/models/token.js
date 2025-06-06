@@ -1,59 +1,65 @@
-const Sequelize = require('sequelize');
+'use strict';
+const { Model } = require('sequelize');
 
-module.exports = function(sequelize, DataTypes) {
-  return sequelize.define('Token', {
+module.exports = (sequelize, DataTypes) => {
+  class Token extends Model {
+    static associate(models) {
+      Token.belongsTo(models.User, {
+        foreignKey: 'user_id',
+        as: 'user'
+      });
+    }
+  }
+
+  Token.init({
     id: {
-      autoIncrement: true,
       type: DataTypes.INTEGER,
-      allowNull: false,
-      primaryKey: true
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false
     },
     token: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.TEXT,
       allowNull: false
     },
-    refreshToken: {
-      type: DataTypes.STRING(255), // Adicionando refreshToken
+    refresh_token: {
+      type: DataTypes.TEXT,
       allowNull: false
     },
-    userId: {
-      type: DataTypes.INTEGER, // ID do usuário (corretor, correspondente ou administrador)
+    user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    user_type: {
+      type: DataTypes.STRING,
       allowNull: false
     },
-    userType: {
-      type: DataTypes.ENUM('corretor', 'correspondente', 'administrador'), // Diferencia o tipo de usuário
-      allowNull: false
-    },
-    expiresAt: {
+    expires_at: {
       type: DataTypes.DATE,
       allowNull: false
     },
     email: {
       type: DataTypes.STRING(255),
-      allowNull: true, // Pode ser null se não for necessário
-      defaultValue: null // Valor padrão
-    },
+      allowNull: true
+    }
   }, {
     sequelize,
-    tableName: 'token',
-    timestamps: true, // Mantém as colunas createdAt e updatedAt
+    modelName: 'Token',
+    tableName: 'tokens',
+    underscored: true,
+    timestamps: true,
     indexes: [
       {
-        name: "PRIMARY",
         unique: true,
-        using: "BTREE",
-        fields: [
-          { name: "id" },
-        ]
-      },
-      {
-        name: "userId_userType_index", // Index para combinar userId e userType para garantir unicidade lógica
-        using: "BTREE",
-        fields: [
-          { name: "userId" },
-          { name: "userType" },
-        ]
+        fields: ['user_id', 'user_type'],
+        name: 'unique_user_id_user_type'
       }
     ]
   });
+
+  return Token;
 };

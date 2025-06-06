@@ -111,7 +111,6 @@ const ClientForm = ({ onSuccess }) => {
     formData.append("estado_civil", estadoCivil.toUpperCase());
     formData.append("naturalidade", naturalidade.toUpperCase());
     formData.append("profissao", profissao.toUpperCase());
-    formData.append("data_admissao", dataAdmissao);
     formData.append("data_nascimento", dataNascimento);
     formData.append("renda_tipo", rendaTipo.toUpperCase());
     formData.append(
@@ -123,6 +122,13 @@ const ClientForm = ({ onSuccess }) => {
     formData.append("qtd_dependentes", qtdDependentes);
     formData.append("nome_dependentes", nomeDependentes);
     formData.append("observacoes", observacoes);
+
+    // Só envia data_admissao se for formal ou mista e estiver preenchida
+    if ((rendaTipo === "formal" || rendaTipo === "mista") && dataAdmissao) {
+      formData.append("data_admissao", dataAdmissao);
+    } else {
+      formData.append("data_admissao", "");
+    }
 
     documentosPessoais.forEach((file) => {
       formData.append("documentosPessoais", file);

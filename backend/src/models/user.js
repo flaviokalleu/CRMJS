@@ -6,7 +6,7 @@ module.exports = (sequelize) => {
     static associate(models) {
       // Exemplo: se quiser manter associação com clientes
       User.hasMany(models.Cliente, {
-        foreignKey: 'userId',
+        foreignKey: 'user_id',
         as: 'clientes'
       });
       // Adicione outras associações conforme necessário

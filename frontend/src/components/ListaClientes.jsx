@@ -281,8 +281,8 @@ const ListaClientes = () => {
                       {new Date(cliente.created_at).toLocaleDateString()}
                     </td>
                     <td className="p-4 text-center text-blue-100">
-                      {cliente.corretor
-                        ? `${cliente.corretor.first_name} ${cliente.corretor.last_name}`
+                      {cliente.user
+                        ? `${cliente.user.first_name} ${cliente.user.last_name}`
                         : "Corretor não definido"}
                     </td>
                     <td className="p-4 text-center">

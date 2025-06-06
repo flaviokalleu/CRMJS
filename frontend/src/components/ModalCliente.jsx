@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { X, FileText, User, Phone, Mail, CreditCard, DollarSign, Calendar, Briefcase, Users, Eye } from "lucide-react";
 
 const apiUrl = process.env.REACT_APP_API_URL;
 
@@ -43,7 +44,7 @@ const ModalCliente = ({ cliente, isOpen, onClose, onStatusChange }) => {
       destinatario: cliente.nome,
       texto: nota,
       data_criacao: new Date(),
-      criado_por_id: user ? user.first_name : null,
+      criado_por_id: user ? user.id : null,
     };
 
     axios
@@ -93,77 +94,167 @@ const ModalCliente = ({ cliente, isOpen, onClose, onStatusChange }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
-      <div className="bg-[#1a2238] text-white p-6 rounded-lg shadow-xl w-full max-w-4xl h-screen max-h-screen overflow-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold">Detalhes do Cliente</h2>
-          <button onClick={onClose} className="text-white text-2xl">
-            &times;
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-2 sm:p-4">
+      <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden border border-blue-800/30">
+        
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6 border-b border-blue-800/30 bg-blue-900/40">
+          <div className="flex items-center gap-3 mb-2 sm:mb-0">
+            <User className="w-6 h-6 text-blue-400" />
+            <h2 className="text-xl sm:text-2xl font-bold text-blue-100">
+              Detalhes do Cliente
+            </h2>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="text-blue-300 hover:text-white transition-colors p-2 hover:bg-blue-800/30 rounded-lg"
+          >
+            <X size={24} />
           </button>
         </div>
-        {/* Informações completas do cliente */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <strong>Nome:</strong> {cliente.nome}
-          </div>
-          <div>
-            <strong>Email:</strong> {cliente.email}
-          </div>
-          <div>
-            <strong>Telefone:</strong> {cliente.telefone}
-          </div>
-          <div>
-            <strong>CPF:</strong> {cliente.cpf}
-          </div>
-          <div>
-            <strong>Renda:</strong> {cliente.valor_renda}
-          </div>
-          <div>
-            <strong>Estado Civil:</strong> {cliente.estado_civil}
-          </div>
-          <div>
-            <strong>Naturalidade:</strong> {cliente.naturalidade}
-          </div>
-          <div>
-            <strong>Profissão:</strong> {cliente.profissao}
-          </div>
-          <div>
-            <strong>Data de Admissão:</strong>{" "}
-            {new Date(cliente.data_admissao).toLocaleDateString()}
-          </div>
-          <div>
-            <strong>Data de Nascimento:</strong>{" "}
-            {new Date(cliente.data_nascimento).toLocaleDateString()}
-          </div>
-          <div>
-            <strong>Tipo de Renda:</strong> {cliente.renda_tipo}
-          </div>
-          <div>
-            <strong>Carteira de Trabalho (Mais de 3 Anos):</strong>{" "}
-            {Boolean(cliente.possui_carteira_mais_tres_anos) ? "Sim" : "Não"}
-          </div>
-          <div>
-            <strong>Possui Dependente:</strong>{" "}
-            {Boolean(cliente.possui_dependente) ? "Sim" : "Não"}
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(95vh-100px)] p-4 sm:p-6 space-y-6">
+          
+          {/* Informações do Cliente */}
+          <div className="bg-blue-900/30 rounded-xl p-4 sm:p-6 border border-blue-800/30">
+            <h3 className="text-lg font-semibold text-blue-200 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Informações Pessoais
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">Nome:</strong>
+                </div>
+                <p className="text-white break-words">{cliente.nome}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Mail className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">Email:</strong>
+                </div>
+                <p className="text-white break-all">{cliente.email}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Phone className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">Telefone:</strong>
+                </div>
+                <p className="text-white">{cliente.telefone}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <CreditCard className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">CPF:</strong>
+                </div>
+                <p className="text-white">{cliente.cpf}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">Renda:</strong>
+                </div>
+                <p className="text-white">{cliente.valor_renda}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Users className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">Estado Civil:</strong>
+                </div>
+                <p className="text-white">{cliente.estado_civil}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <strong className="text-blue-300 text-sm">Naturalidade:</strong>
+                </div>
+                <p className="text-white">{cliente.naturalidade}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Briefcase className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">Profissão:</strong>
+                </div>
+                <p className="text-white">{cliente.profissao}</p>
+              </div>
+
+              {/* Data de Admissão - só aparece se não for renda informal */}
+              {cliente.renda_tipo !== "INFORMAL" && cliente.renda_tipo !== "informal" && (
+                <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar className="w-4 h-4 text-blue-400" />
+                    <strong className="text-blue-300 text-sm">Data de Admissão:</strong>
+                  </div>
+                  <p className="text-white">
+                    {cliente.data_admissao && !isNaN(new Date(cliente.data_admissao).getTime())
+                      ? new Date(cliente.data_admissao).toLocaleDateString()
+                      : "Não informado"}
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <strong className="text-blue-300 text-sm">Data de Nascimento:</strong>
+                </div>
+                <p className="text-white">
+                  {cliente.data_nascimento 
+                    ? new Date(cliente.data_nascimento).toLocaleDateString()
+                    : "Não informado"}
+                </p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <strong className="text-blue-300 text-sm">Tipo de Renda:</strong>
+                </div>
+                <p className="text-white">{cliente.renda_tipo}</p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <strong className="text-blue-300 text-sm">Carteira +3 Anos:</strong>
+                </div>
+                <p className="text-white">
+                  {Boolean(cliente.possui_carteira_mais_tres_anos) ? "Sim" : "Não"}
+                </p>
+              </div>
+
+              <div className="bg-blue-950/40 p-3 rounded-lg border border-blue-800/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <strong className="text-blue-300 text-sm">Possui Dependente:</strong>
+                </div>
+                <p className="text-white">
+                  {Boolean(cliente.possui_dependente) ? "Sim" : "Não"}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="col-span-2">
-            <strong>Status:</strong>
+          {/* Status */}
+          <div className="bg-blue-900/30 rounded-xl p-4 sm:p-6 border border-blue-800/30">
+            <h3 className="text-lg font-semibold text-blue-200 mb-4">Status do Cliente</h3>
             <select
               value={status}
               onChange={handleStatusChange}
-              className="ml-2 bg-[#2e3b55] text-white p-2 rounded-lg border border-gray-600 w-full"
+              className="w-full bg-blue-950/60 text-white p-3 rounded-lg border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition"
             >
               <option value="aguardando_aprovacao">Aguardando Aprovação</option>
               <option value="reprovado">Cliente Reprovado</option>
               <option value="condicionado">Cliente Condicionado</option>
               <option value="cliente_aprovado">Cliente Aprovado</option>
-              <option value="documentacao_pendente">
-                Documentação Pendente
-              </option>
-              <option value="aguardando_cancelamento_qv">
-                Aguardando Cancelamento / QV
-              </option>
+              <option value="documentacao_pendente">Documentação Pendente</option>
+              <option value="aguardando_cancelamento_qv">Aguardando Cancelamento / QV</option>
               <option value="proposta_apresentada">Proposta Apresentada</option>
               <option value="visita_efetuada">Visita Efetuada</option>
               <option value="fechamento_proposta">Fechamento Proposta</option>
@@ -173,81 +264,97 @@ const ModalCliente = ({ cliente, isOpen, onClose, onStatusChange }) => {
               <option value="nao_deu_continuidade">Não Deu Continuidade</option>
             </select>
           </div>
-        </div>
-        {/* Adicionar Nota */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">
-            Adicionar Nota:
-          </label>
-          <textarea
-            value={nota}
-            onChange={(e) => setNota(e.target.value)}
-            className="w-full bg-[#2e3b55] text-white p-3 rounded-lg border border-gray-600"
-            rows="4"
-          ></textarea>
-          <button
-            onClick={handleAddNota}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg mt-2 hover:bg-blue-700 transition-colors duration-200"
-          >
-            Adicionar Nota
-          </button>
-        </div>
-        {/* Documentação */}
-        <div>
-          <h3 className="text-xl font-semibold mb-2">Documentação</h3>
-          {cliente.documentos_pessoais && (
+
+          {/* Documentação */}
+          <div className="bg-blue-900/30 rounded-xl p-4 sm:p-6 border border-blue-800/30">
+            <h3 className="text-lg font-semibold text-blue-200 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Documentação
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {cliente.documentos_pessoais && (
+                <button
+                  onClick={() => handleDocumentClick(cliente.documentos_pessoais)}
+                  className="flex items-center gap-2 bg-blue-800/40 hover:bg-blue-700/50 text-white px-4 py-3 rounded-lg transition-colors border border-blue-700/30"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="text-sm">Documentos Pessoais</span>
+                </button>
+              )}
+              {cliente.extrato_bancario && (
+                <button
+                  onClick={() => handleDocumentClick(cliente.extrato_bancario)}
+                  className="flex items-center gap-2 bg-blue-800/40 hover:bg-blue-700/50 text-white px-4 py-3 rounded-lg transition-colors border border-blue-700/30"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="text-sm">Extrato Bancário</span>
+                </button>
+              )}
+              {cliente.ficha_de_visita && (
+                <button
+                  onClick={() => handleDocumentClick(cliente.ficha_de_visita)}
+                  className="flex items-center gap-2 bg-blue-800/40 hover:bg-blue-700/50 text-white px-4 py-3 rounded-lg transition-colors border border-blue-700/30"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="text-sm">Ficha de Visita</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Adicionar Nota */}
+          <div className="bg-blue-900/30 rounded-xl p-4 sm:p-6 border border-blue-800/30">
+            <h3 className="text-lg font-semibold text-blue-200 mb-4">Adicionar Nota</h3>
+            <textarea
+              value={nota}
+              onChange={(e) => setNota(e.target.value)}
+              className="w-full bg-blue-950/60 text-white p-3 rounded-lg border border-blue-800/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-800/30 transition placeholder:text-white/60 resize-none"
+              rows="4"
+              placeholder="Digite sua nota aqui..."
+            />
             <button
-              onClick={() => handleDocumentClick(cliente.documentos_pessoais)}
-              className="block w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-2 hover:bg-gray-800 transition-colors duration-200"
+              onClick={handleAddNota}
+              className="mt-3 bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg transition-colors font-medium"
             >
-              Ver Documentos Pessoais
+              Adicionar Nota
             </button>
-          )}
-          {cliente.extrato_bancario && (
-            <button
-              onClick={() => handleDocumentClick(cliente.extrato_bancario)}
-              className="block w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-2 hover:bg-gray-800 transition-colors duration-200"
-            >
-              Ver Extrato Bancário
-            </button>
-          )}
-          {cliente.ficha_de_visita && (
-            <button
-              onClick={() => handleDocumentClick(cliente.ficha_de_visita)}
-              className="block w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-2 hover:bg-gray-800 transition-colors duration-200"
-            >
-              Ver Ficha de Visita
-            </button>
-          )}
-        </div>
-        {/* Notas */}
-        <div className="mt-4">
-          <h3 className="text-xl font-semibold mb-2">Notas</h3>
-          <ul className="space-y-2 max-h-80 overflow-auto">
-            {notas.map((nota, index) => (
-              <li key={index} className="bg-gray-800 p-4 rounded-lg">
-                <p>{nota.texto}</p>
-                <small className="text-gray-400">
-                  Criado por: {nota.criado_por_id || "Desconhecido"} em{" "}
-                  {new Date(nota.data_criacao).toLocaleDateString()}
-                </small>
-                <div className="mt-2 flex space-x-2">
-                  <button
-                    onClick={() => handleConcluirNota(nota.id)}
-                    className="bg-green-600 text-white px-4 py-1 rounded-lg hover transition-colors duration-200"
-                  >
-                    Concluir
-                  </button>
-                  <button
-                    onClick={() => handleDeletarNota(nota.id)}
-                    className="bg-red-600 text-white px-4 py-1 rounded-lg hover transition-colors duration-200"
-                  >
-                    Deletar
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          </div>
+
+          {/* Notas */}
+          <div className="bg-blue-900/30 rounded-xl p-4 sm:p-6 border border-blue-800/30">
+            <h3 className="text-lg font-semibold text-blue-200 mb-4">Notas</h3>
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {notas.length > 0 ? (
+                notas.map((nota, index) => (
+                  <div key={index} className="bg-blue-950/40 p-4 rounded-lg border border-blue-800/20">
+                    <p className="text-white mb-3 break-words">{nota.texto}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <small className="text-blue-300">
+                        Criado por: {nota.criado_por_id || "Desconhecido"} em{" "}
+                        {new Date(nota.data_criacao).toLocaleDateString()}
+                      </small>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleConcluirNota(nota.id)}
+                          className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-sm transition-colors"
+                        >
+                          Concluir
+                        </button>
+                        <button
+                          onClick={() => handleDeletarNota(nota.id)}
+                          className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded text-sm transition-colors"
+                        >
+                          Deletar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-blue-300 text-center py-4">Nenhuma nota encontrada.</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

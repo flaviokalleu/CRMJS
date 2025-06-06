@@ -9,9 +9,9 @@ import {
 import LineChart from "./Charts/LineChart";
 import BarChart from "./Charts/BarChart";
 import DashboardCard from "../DashboardCard";
-import Top5Corretores from "../Top5Corretores";
+import Top5Usuarios from "../Top5Corretores"; // Renomeie o componente para Top5Usuarios
 
-const DashboardAdministrador = () => {
+const DashboardCorrespondente = () => {
   const [totalCorretores, setTotalCorretores] = useState(0);
   const [totalClientes, setTotalClientes] = useState(0);
   const [totalCorrespondentes, setTotalCorrespondentes] = useState(0);
@@ -23,7 +23,7 @@ const DashboardAdministrador = () => {
     useState([]);
   const [monthlyData, setMonthlyData] = useState({ labels: [], datasets: [] });
   const [weeklyData, setWeeklyData] = useState({ labels: [], datasets: [] });
-  const [top5Corretores, setTop5Corretores] = useState([]);
+  const [top5Usuarios, setTop5Usuarios] = useState([]); // Renomeie o estado
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -53,7 +53,7 @@ const DashboardAdministrador = () => {
         setClientesAguardandoAprovacao(
           dashboardData.clientesAguardandoAprovacao || []
         );
-        setTop5Corretores(dashboardData.top5Corretores || []);
+        setTop5Usuarios(dashboardData.top5Usuarios || []); // Atualize aqui
 
         const monthlyData = await fetchData(
           `${process.env.REACT_APP_API_URL}/dashboard/monthly`
@@ -180,9 +180,9 @@ const DashboardAdministrador = () => {
           </div>
           <div className="bg-gray-800 p-6 rounded-lg shadow-lg mt-8">
             <h2 className="text-2xl font-bold text-white mb-4">
-              Top 5 Corretores
+              Top 5 Usuários
             </h2>
-            <Top5Corretores corretores={top5Corretores} />
+            <Top5Usuarios usuarios={top5Usuarios} />
           </div>
           <div className="bg-gray-800 p-6 rounded-lg shadow-lg mt-8">
             <h2 className="text-2xl font-bold text-white mb-4">
@@ -225,4 +225,4 @@ const DashboardAdministrador = () => {
   );
 };
 
-export default DashboardAdministrador;
+export default DashboardCorrespondente;

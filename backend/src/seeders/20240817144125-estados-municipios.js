@@ -38,9 +38,9 @@ module.exports = {
         return sigla
           ? {
               nome: m.nome,
-              estadoId: siglaToId[sigla],
-              createdAt: now,
-              updatedAt: now
+              estado_id: siglaToId[sigla],
+              created_at: now,      // <-- snake_case aqui
+              updated_at: now       // <-- snake_case aqui
             }
           : null;
       })
@@ -49,18 +49,18 @@ module.exports = {
     // 4. Remover duplicados (nome + estadoId)
     const seen = new Set();
     const uniqueMunicipios = municipios.filter(m => {
-      const key = `${m.nome}-${m.estadoId}`;
+      const key = `${m.nome}-${m.estado_id}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
-    // 5. Inserir municípios na tabela "Municipios"
-    await queryInterface.bulkInsert('Municipios', uniqueMunicipios, {});
+    // 5. Inserir municípios na tabela "municipios"
+    await queryInterface.bulkInsert('municipios', uniqueMunicipios, {});
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('Municipios', null, {});
+    await queryInterface.bulkDelete('municipios', null, {});
     await queryInterface.bulkDelete('estados', null, {});
   }
 };

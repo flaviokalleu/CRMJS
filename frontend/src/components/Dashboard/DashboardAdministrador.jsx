@@ -18,7 +18,7 @@ const DashboardAdministrador = () => {
     totalCorrespondentes: 0,
     totalClientesAguardandoAprovacao: 0,
     clientesAguardandoAprovacao: [],
-    top5Corretores: []
+    top5Usuarios: [] // <-- alterado aqui
   });
 
   const [chartData, setChartData] = useState({
@@ -54,7 +54,7 @@ const DashboardAdministrador = () => {
           totalCorrespondentes: mainData.totalCorrespondentes,
           totalClientesAguardandoAprovacao: mainData.totalClientesAguardandoAprovacao,
           clientesAguardandoAprovacao: mainData.clientesAguardandoAprovacao || [],
-          top5Corretores: mainData.top5Corretores || []
+          top5Usuarios: mainData.top5Usuarios || [] // <-- alterado aqui
         });
 
         const monthlyData = await fetchData(
@@ -123,7 +123,7 @@ const DashboardAdministrador = () => {
     totalCorrespondentes,
     totalClientesAguardandoAprovacao,
     clientesAguardandoAprovacao,
-    top5Corretores
+    top5Usuarios // <-- alterado aqui
   } = dashboardData;
 
   // Chart selector
@@ -267,21 +267,34 @@ const DashboardAdministrador = () => {
           className="bg-blue-900/30 backdrop-blur-md rounded-2xl p-8 border border-blue-800/40 shadow-lg w-full max-w-5xl mx-auto"
         >
           <h2 className="text-xl font-semibold text-blue-200 mb-6 text-center">
-            Top 5 Corretores
+            Top 5 Usuários
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {top5Corretores.map((corretor, index) => (
-              <div
-                key={corretor.id}
-                className="bg-blue-950/60 rounded-lg p-4 border border-blue-800/30 flex flex-col items-center"
-              >
-                <div className="w-10 h-10 rounded-full bg-blue-700/30 flex items-center justify-center mb-2">
-                  <span className="text-blue-300 font-bold">#{index + 1}</span>
-                </div>
-                <p className="text-blue-200 font-medium text-center">{corretor.nome}</p>
-                <p className="text-blue-400 text-sm text-center">{corretor.totalClientes} clientes</p>
-              </div>
-            ))}
+            {top5Usuarios.map((item, index) => {
+  const user = item.user || {};
+  const firstName = user.first_name || user.dataValues?.first_name || "";
+  const lastName = user.last_name || user.dataValues?.last_name || "";
+  const nomeCompleto =
+    firstName && lastName
+      ? `${firstName} ${lastName}`
+      : firstName || lastName || "Usuário não definido";
+  return (
+    <div
+      key={user.id || index}
+      className="bg-blue-950/60 rounded-lg p-4 border border-blue-800/30 flex flex-col items-center"
+    >
+      <div className="w-10 h-10 rounded-full bg-blue-700/30 flex items-center justify-center mb-2">
+        <span className="text-blue-300 font-bold">#{index + 1}</span>
+      </div>
+      <p className="text-blue-200 font-medium text-center">
+        {nomeCompleto}
+      </p>
+      <p className="text-blue-400 text-sm text-center">
+        {item.clientes} clientes
+      </p>
+    </div>
+  );
+})}
           </div>
         </motion.div>
 

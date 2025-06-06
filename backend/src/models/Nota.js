@@ -37,5 +37,9 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true
   });
 
+  Nota.associate = function(models) {
+    Nota.belongsTo(models.Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
+  };
+
   return Nota;
 };

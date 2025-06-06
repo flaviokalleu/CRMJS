@@ -141,7 +141,18 @@ const addPDFFilesToPDF = async (pdfDoc, pdfFiles) => {
   }
 };
 
-// Função para criar e salvar PDF
+// Função utilitária para deletar arquivos de forma segura
+const safeDeleteFile = (filePath) => {
+  try {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (err) {
+    console.error(`Erro ao deletar arquivo ${filePath}:`, err);
+  }
+};
+
+// Função para criar e salvar PDF (mantendo apenas o PDF final)
 const createAndSavePDF = async (files, user, clienteId, tipo) => {
   const username = user.username;
   const uploadPath = path.join(uploadDir, username, clienteId, tipo);
@@ -156,8 +167,13 @@ const createAndSavePDF = async (files, user, clienteId, tipo) => {
     pdfDoc = await PDFDocument.create();
   }
 
-  await addImageFilesToPDF(pdfDoc, files.filter(file => file.mimetype.startsWith('image/')));
-  await addPDFFilesToPDF(pdfDoc, files.filter(file => file.mimetype === 'application/pdf'));
+  // Separe os arquivos por tipo
+  const imageFiles = files.filter(file => file.mimetype?.startsWith('image/'));
+  const pdfFiles = files.filter(file => file.mimetype === 'application/pdf');
+
+  // Adicione imagens e PDFs ao documento
+  await addImageFilesToPDF(pdfDoc, imageFiles);
+  await addPDFFilesToPDF(pdfDoc, pdfFiles);
 
   const pdfBytes = await pdfDoc.save();
   if (!fs.existsSync(uploadPath)) {
@@ -166,11 +182,15 @@ const createAndSavePDF = async (files, user, clienteId, tipo) => {
 
   fs.writeFileSync(finalPdfPath, pdfBytes);
 
+  // Após salvar o PDF final, delete todos os arquivos enviados
+  [...imageFiles, ...pdfFiles].forEach(file => safeDeleteFile(file.file));
+
   return `Uploads/${username}/${clienteId}/${tipo}/documentos.pdf`;
 };
 
 // Função para encontrar usuário e papel
 const findUserByEmail = async (email) => {
+  if (!email) return null;
   const user = await User.findOne({ where: { email } });
   if (!user) return null;
   if (user.is_corretor) return { user, role: 'Corretor' };
@@ -197,14 +217,14 @@ router.post('/clientes', authenticateToken, logFiles, async (req, res) => {
     const { nome, email, telefone, cpf, valor_renda, estado_civil, naturalidade, profissao, data_admissao, data_nascimento, renda_tipo, tem_mais_de_tres_anos, numero_pis, possui_dependente, qtd_dependentes, nome_dependentes, observacoes } = req.body;
 
     // Encontrar usuário
-    const userResult = await findUserByEmail(req.user.email);
+    const userResult = await findUserByEmail(req.user?.email);
     if (!userResult) {
       return res.status(403).json({ error: 'Usuário não autorizado. Apenas Corretores, Correspondentes ou Administradores podem criar clientes.' });
     }
     const { user, role } = userResult;
 
-    // Definir userId apenas para Corretor
-    const userId = role === 'Corretor' ? user.id : null;
+    // Vincular sempre o user_id ao usuário autenticado
+    const user_id = user.id;
 
     const cliente = await Cliente.create({
       nome,
@@ -225,7 +245,7 @@ router.post('/clientes', authenticateToken, logFiles, async (req, res) => {
       nome_dependentes: nome_dependentes || null,
       observacoes: observacoes || null,
       status: 'aguardando_aprovacao',
-      userId
+      user_id
     });
 
     // Agrupar arquivos por campo
@@ -245,14 +265,19 @@ router.post('/clientes', authenticateToken, logFiles, async (req, res) => {
 
     if (notas.length > 0) {
       await Promise.all(notas.map(async (file) => {
-        const notaBytes = fs.readFileSync(file.file);
-        const notaDoc = await PDFDocument.load(notaBytes);
-        const notaContent = await notaDoc.getPage(0).getTextContent();
-        await Nota.create({
-          clienteId: cliente.id,
-          content: JSON.stringify(notaContent)
-        });
-        await unlinkAsync(file.file);
+        try {
+          const notaBytes = fs.readFileSync(file.file);
+          const notaDoc = await PDFDocument.load(notaBytes);
+          const notaContent = await notaDoc.getPage(0).getTextContent();
+          await Nota.create({
+            clienteId: cliente.id,
+            content: JSON.stringify(notaContent)
+          });
+        } catch (err) {
+          console.error('Erro ao processar nota:', err);
+        } finally {
+          safeDeleteFile(file.file);
+        }
       }));
     }
 
@@ -277,7 +302,7 @@ router.put('/clientes/:id', authenticateToken, logFiles, async (req, res) => {
     const { nome, email, telefone, cpf, valor_renda, estado_civil, naturalidade, profissao, data_admissao, data_nascimento, renda_tipo, possui_carteira_mais_tres_anos, numero_pis, possui_dependente, status } = req.body;
 
     // Encontrar usuário
-    const userResult = await findUserByEmail(req.user.email);
+    const userResult = await findUserByEmail(req.user?.email);
     if (!userResult) {
       return res.status(403).json({ error: 'Usuário não autorizado. Apenas Corretores, Correspondentes ou Administradores podem editar clientes.' });
     }
@@ -292,7 +317,6 @@ router.put('/clientes/:id', authenticateToken, logFiles, async (req, res) => {
     if (role === 'Corretor' && cliente.userId !== user.id) {
       return res.status(403).json({ error: 'Você não tem permissão para editar este cliente.' });
     }
-    // Correspondente e Administrador podem editar qualquer cliente
 
     await cliente.update({
       nome,
@@ -336,14 +360,19 @@ router.put('/clientes/:id', authenticateToken, logFiles, async (req, res) => {
 
     if (notas.length > 0) {
       await Promise.all(notas.map(async (file) => {
-        const notaBytes = fs.readFileSync(file.file);
-        const notaDoc = await PDFDocument.load(notaBytes);
-        const notaContent = await notaDoc.getPage(0).getTextContent();
-        await Nota.create({
-          clienteId: cliente.id,
-          content: JSON.stringify(notaContent)
-        });
-        await unlinkAsync(file.file);
+        try {
+          const notaBytes = fs.readFileSync(file.file);
+          const notaDoc = await PDFDocument.load(notaBytes);
+          const notaContent = await notaDoc.getPage(0).getTextContent();
+          await Nota.create({
+            clienteId: cliente.id,
+            content: JSON.stringify(notaContent)
+          });
+        } catch (err) {
+          console.error('Erro ao processar nota:', err);
+        } finally {
+          safeDeleteFile(file.file);
+        }
       }));
     }
 

@@ -9,13 +9,20 @@ router.post('/notas', async (req, res) => {
     console.log('Dados recebidos:', { cliente_id, processo_id, nova, destinatario, texto, data_criacao, criado_por_id });
 
     try {
-        // Opcional: validar se criado_por_id existe na tabela User
+        if (criado_por_id && isNaN(Number(criado_por_id))) {
+            return res.status(400).json({ error: 'O campo criado_por_id deve ser um número.' });
+        }
+        let user = null;
         if (criado_por_id) {
-            const user = await User.findByPk(criado_por_id);
+            user = await User.findByPk(criado_por_id);
             if (!user) {
                 return res.status(400).json({ error: 'Usuário criador não encontrado.' });
             }
         }
+
+        // Se quiser garantir que o cliente existe, pode buscar:
+        // const cliente = await Cliente.findByPk(cliente_id);
+        // if (!cliente) return res.status(400).json({ error: 'Cliente não encontrado.' });
 
         const novaNota = await Nota.create({
             cliente_id,
@@ -24,9 +31,9 @@ router.post('/notas', async (req, res) => {
             destinatario,
             texto,
             data_criacao,
-            criado_por_id
+            criado_por_id: user ? user.id : null,
         });
-       
+
         res.status(201).json(novaNota);
     } catch (error) {
         console.error('Erro ao criar nota:', error);

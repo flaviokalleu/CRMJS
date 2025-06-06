@@ -1,39 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const { User, Cliente } = require('../models'); // Use apenas User e Cliente
-const Sequelize = require('sequelize');
-const { Op, fn, col } = Sequelize;
-const literal = Sequelize.literal;
+const { User, Cliente } = require('../models');
+const { Op, fn, col, literal } = require('sequelize');
 
 // Middleware de autenticação
 router.use(authMiddleware);
 
+// Dashboard principal
 router.get('/', async (req, res) => {
     try {
-        const userRole = req.user.role; // Assumindo que a role do usuário está disponível em req.user
+        const userRole = req.user.role;
         const user = await User.findOne({ where: { email: req.user.email } });
 
-        // Condição para filtrar dados com base na role
         let whereCondition = {};
         if (userRole === 'corretor' && user && user.is_corretor) {
             whereCondition = { userId: user.id };
-        } else if (userRole === 'Administrador' || userRole === 'Correspondente') {
-            whereCondition = {}; // Acesso total para administradores e correspondentes
         }
 
-        // Contar o número total de corretores
         const totalCorretores = userRole === 'corretor'
             ? 1
             : await User.count({ where: { is_corretor: true } });
 
-        // Contar o número total de clientes
         const totalClientes = await Cliente.count({ where: whereCondition });
-
-        // Contar o número total de correspondentes
         const totalCorrespondentes = await User.count({ where: { is_correspondente: true } });
 
-        // Contar o número de clientes cadastrados este mês
         const clientesEsteMes = await Cliente.count({
             where: {
                 ...whereCondition,
@@ -43,46 +34,43 @@ router.get('/', async (req, res) => {
             },
         });
 
-        // Obter os 5 corretores com o maior número de clientes
-        const top5Corretores = (userRole === 'corretor')
-            ? []
-            : await Cliente.findAll({
-                attributes: [
-                    'userId',
-                    [fn('COUNT', col('userId')), 'clients']
-                ],
-                include: [
-                    {
-                        model: User,
-                        attributes: ['id', 'first_name', 'last_name', 'photo'],
-                        as: 'user',
-                        where: { is_corretor: true }
-                    }
-                ],
-                group: ['userId', 'user.id', 'user.first_name', 'user.last_name', 'user.photo'],
-                order: [[fn('COUNT', col('userId')), 'DESC']],
-                limit: 5
-            });
+        // Top 5 usuários por número de clientes
+        const top5Usuarios = await Cliente.findAll({
+            attributes: [
+                'user_id',
+                [fn('COUNT', col('user_id')), 'clientes']
+            ],
+            include: [{
+                model: User,
+                attributes: ['id', 'first_name', 'last_name', 'photo'],
+                as: 'user'
+                // Removido o filtro where: { is_corretor: true }
+            }],
+            group: [
+                'user_id',
+                'user.id', 'user.first_name', 'user.last_name', 'user.photo'
+            ],
+            order: [[fn('COUNT', col('user_id')), 'DESC']],
+            limit: 5
+        });
 
-        // Ajustar corretores que possam ter 'null' como valor em 'photo'
-        const top5CorretoresAdjusted = top5Corretores.map(corretorData => {
-            const user = corretorData.user || {};
+        const top5UsuariosAdjusted = top5Usuarios.map(usuarioData => {
+            const user = usuarioData.user || {};
             return {
-                ...corretorData.toJSON(),
+                ...usuarioData.toJSON(),
                 user: {
                     ...user,
-                    photo: user.photo || '/path/to/default/photo.jpg', // Foto padrão
+                    photo: user.photo || '/path/to/default/photo.jpg',
                 }
             };
         });
 
-        // Responder com os dados do dashboard
         res.json({
             totalCorretores,
             totalClientes,
             totalCorrespondentes,
             clientesEsteMes,
-            top5Corretores: top5CorretoresAdjusted
+            top5Usuarios: top5UsuariosAdjusted // <-- alterado aqui
         });
     } catch (error) {
         console.error('Erro ao buscar dados do dashboard', error);
@@ -90,15 +78,12 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Rota para obter clientes aguardando aprovação
+// Clientes aguardando aprovação
 router.get('/clientes', async (req, res) => {
     try {
-        const status = req.query.status; // Obter o status da query
+        const status = req.query.status;
         const whereCondition = {};
-
-        if (status) {
-            whereCondition.status = status; // Filtrar pelo status se fornecido
-        }
+        if (status) whereCondition.status = status;
 
         const clientes = await Cliente.findAll({ where: whereCondition });
         const total = await Cliente.count({ where: whereCondition });
@@ -110,7 +95,7 @@ router.get('/clientes', async (req, res) => {
     }
 });
 
-// Rota para obter dados mensais de clientes cadastrados
+// Dados mensais de clientes cadastrados
 router.get('/monthly', async (req, res) => {
     try {
         const userRole = req.user.role;
@@ -121,8 +106,7 @@ router.get('/monthly', async (req, res) => {
             whereCondition = { userId: user.id };
         }
 
-        // Obter o número de clientes cadastrados por mês
-        const monthlyClients = await Cliente.findAll({
+        const monthlyclientes = await Cliente.findAll({
             attributes: [
                 [literal('EXTRACT(MONTH FROM "created_at")'), 'month'],
                 [literal('EXTRACT(YEAR FROM "created_at")'), 'year'],
@@ -131,7 +115,7 @@ router.get('/monthly', async (req, res) => {
             where: {
                 ...whereCondition,
                 created_at: {
-                    [Op.gte]: new Date(new Date().getFullYear(), 0, 1), // Início do ano atual
+                    [Op.gte]: new Date(new Date().getFullYear(), 0, 1),
                 },
             },
             group: [literal('EXTRACT(YEAR FROM "created_at")'), literal('EXTRACT(MONTH FROM "created_at")')],
@@ -141,11 +125,10 @@ router.get('/monthly', async (req, res) => {
             ]
         });
 
-        // Inicializar array para os 12 meses do ano
         const monthlyData = Array(12).fill(0);
-        monthlyClients.forEach(client => {
-            const month = parseInt(client.get('month')) - 1; // Ajustar para índice do array (0-11)
-            monthlyData[month] = parseInt(client.get('count')); // Garantir que count é um número
+        monthlyclientes.forEach(client => {
+            const month = parseInt(client.get('month')) - 1;
+            monthlyData[month] = parseInt(client.get('count'));
         });
 
         res.json({ monthlyData });
@@ -155,7 +138,7 @@ router.get('/monthly', async (req, res) => {
     }
 });
 
-// Rota para obter dados semanais de clientes cadastrados
+// Dados semanais de clientes cadastrados
 router.get('/weekly', async (req, res) => {
     try {
         const userRole = req.user.role;
@@ -166,8 +149,7 @@ router.get('/weekly', async (req, res) => {
             whereCondition = { userId: user.id };
         }
 
-        // Obter o número de clientes cadastrados por dia da semana
-        const weeklyClients = await Cliente.findAll({
+        const weeklyclientes = await Cliente.findAll({
             attributes: [
                 [literal('EXTRACT(DOW FROM "created_at")'), 'dayOfWeek'],
                 [fn('COUNT', col('id')), 'count']
@@ -175,18 +157,17 @@ router.get('/weekly', async (req, res) => {
             where: {
                 ...whereCondition,
                 created_at: {
-                    [Op.gte]: new Date(new Date() - 7 * 24 * 60 * 60 * 1000), // Últimos 7 dias
+                    [Op.gte]: new Date(new Date() - 7 * 24 * 60 * 60 * 1000),
                 },
             },
             group: [literal('EXTRACT(DOW FROM "created_at")')],
             order: [[literal('EXTRACT(DOW FROM "created_at")'), 'ASC']]
         });
 
-        // Inicializar array para os 7 dias da semana (0 = Domingo, 6 = Sábado)
         const weeklyData = Array(7).fill(0);
-        weeklyClients.forEach(client => {
-            const day = parseInt(client.get('dayOfWeek')); // DOW retorna 0 (Domingo) a 6 (Sábado)
-            weeklyData[day] = parseInt(client.get('count')); // Garantir que count é um número
+        weeklyclientes.forEach(client => {
+            const day = parseInt(client.get('dayOfWeek'));
+            weeklyData[day] = parseInt(client.get('count'));
         });
 
         res.json({ weeklyData });

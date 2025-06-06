@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-const { Token, Corretor, Correspondente, Administrador, Acesso } = require('../models');
-const requestIp = require('request-ip'); // Import the request-ip package
+const { Token, User, Acesso } = require('../models');
+const requestIp = require('request-ip');
 
 const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = process.env;
 
@@ -11,19 +11,26 @@ if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
 // Helper function to calculate expiration date
 const getExpirationDate = (minutes) => new Date(Date.now() + minutes * 60000);
 
-// Função para criar e armazenar o token
-const createAndStoreToken = async (user, userType) => {
-    const payload = { id: user.id, role: user.role || 'user', userType };
+// Function to create and store token
+const createAndStoreToken = async (user) => {
+    const payload = { 
+        id: user.id, 
+        email: user.email,
+        role: user.role || 'user',
+        is_corretor: user.is_corretor,
+        is_correspondente: user.is_correspondente,
+        is_administrador: user.is_administrador
+    };
+    
     const token = jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
     const refreshToken = jwt.sign(payload, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
     await Token.upsert({
         token,
         refreshToken,
-        userId: user.id,
-        userType,
-        expiresAt: getExpirationDate(60), // Expira em 60 minutos
-        email: user.email || null,
+        user_id: user.id, // snake_case
+        expiresAt: getExpirationDate(60),
+        email: user.email,
         createdAt: new Date(),
         updatedAt: new Date(),
     });
@@ -31,36 +38,24 @@ const createAndStoreToken = async (user, userType) => {
     return { token, refreshToken };
 };
 
-// Função para validar entrada
+// Input validation function
 const validateInput = (email, password) => {
     if (!email || !password) {
         throw new Error('Email e senha são obrigatórios');
     }
 };
 
-// Função auxiliar para encontrar o usuário
-const findUserByEmail = async (email) => {
-    const userTypes = [Corretor, Correspondente, Administrador];
-    for (const UserType of userTypes) {
-        const user = await UserType.findOne({ where: { email } });
-        if (user) return { user, userType: UserType.name.toLowerCase() }; // 'corretor', 'correspondente', or 'administrador'
-    }
-    return null;
-};
-
-// Função para autenticar o usuário
+// User authentication function
 const authenticateUser = async (req, res) => {
     const { email, password } = req.body;
 
     try {
         validateInput(email, password);
 
-        const userInfo = await findUserByEmail(email);
-        if (!userInfo) {
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
             return res.status(401).json({ message: 'Usuário não encontrado' });
         }
-
-        const { user, userType } = userInfo;
 
         // Compare the Base64 encoded password
         const isPasswordValid = Buffer.from(password).toString('base64') === user.password;
@@ -68,26 +63,34 @@ const authenticateUser = async (req, res) => {
             return res.status(401).json({ message: 'Credenciais inválidas' });
         }
 
-        // Use request-ip to get the client's IPv4 address
+        // Get client's IPv4 address
         const ip = requestIp.getClientIp(req);
         
-        // Registra o acesso
+        // Register access
         await Acesso.create({
             ip,
             referer: req.get('Referrer') || 'N/A',
             userAgent: req.get('User-Agent') || 'N/A',
-            [userType + 'Id']: user.id
+            user_id: user.id // snake_case
         });
 
-        // Cria e armazena o token
-        const { token, refreshToken } = await createAndStoreToken(user, userType);
+        // Create and store token
+        const { token, refreshToken } = await createAndStoreToken(user);
 
-        // Retorna o token e informações do usuário
+        // Return token and user information
         res.json({
             token,
             refreshToken,
-            role: user.role || 'user',
-            userType,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role || 'user',
+                is_corretor: user.is_corretor,
+                is_correspondente: user.is_correspondente,
+                is_administrador: user.is_administrador,
+                first_name: user.first_name,
+                last_name: user.last_name
+            }
         });
     } catch (error) {
         console.error('Erro ao autenticar o usuário:', error);
@@ -95,7 +98,7 @@ const authenticateUser = async (req, res) => {
     }
 };
 
-// Middleware para autenticação do token
+// Token authentication middleware
 const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];

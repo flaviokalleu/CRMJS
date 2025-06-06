@@ -1,24 +1,8 @@
 'use strict';
 const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize) => {
-  class Cliente extends Model {
-    static associate(models) {
-      // Associação de Cliente com User (muitos para um)
-      Cliente.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'user'
-      });
-      
-      // Associação de Cliente com Nota (um para muitos)
-      Cliente.hasMany(models.Nota, {
-        foreignKey: 'cliente_id',
-        as: 'notas'
-      });
-    }
-  }
-
-  Cliente.init({
+module.exports = (sequelize, DataTypes) => {
+  const Cliente = sequelize.define('Cliente', {
     nome: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -97,23 +81,23 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       defaultValue: 'aguardando_aprovação'
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: 'users',
         key: 'id'
       }
     }
   }, {
-    sequelize,
-    modelName: 'Cliente',
     tableName: 'clientes',
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
-    underscored: true
+    underscored: true, // importante!
   });
+
+  Cliente.associate = function(models) {
+    Cliente.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
+    Cliente.hasMany(models.Nota, { foreignKey: 'cliente_id', as: 'notas' });
+  };
 
   return Cliente;
 };
