@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 
 const AuthContext = createContext();
+
 const getIpAddress = async () => {
   try {
     const response = await axios.get("https://api.ipify.org?format=json");
@@ -12,12 +13,14 @@ const getIpAddress = async () => {
   }
 };
 
-const logAccess = async (ip, referer, role) => {
+// Agora aceita userId
+const logAccess = async (ip, referer, role, userId) => {
   try {
     await axios.post(`${process.env.REACT_APP_API_URL}/acessos`, {
       ip,
       referer,
       role,
+      userId, // envia o id do usuário
     });
   } catch (error) {
     console.error(
@@ -30,24 +33,27 @@ const logAccess = async (ip, referer, role) => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
+  // Adicionar uma função para buscar os detalhes do usuário
+  const fetchUserDetails = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/auth/me`
+      );
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Erro ao obter detalhes do usuário:",
+        error.response?.data || error.message
+      );
+      logout();
+      return null;
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     const tokenExpiry = localStorage.getItem("tokenExpiry");
-
-    const fetchUserDetails = async () => {
-      try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_API_URL}/auth/me`
-        );
-        setUser(response.data);
-      } catch (error) {
-        console.error(
-          "Erro ao obter detalhes do usuário:",
-          error.response?.data || error.message
-        );
-        logout();
-      }
-    };
 
     if (token && tokenExpiry) {
       const now = new Date().getTime();
@@ -61,6 +67,7 @@ export const AuthProvider = ({ children }) => {
         updateToken();
       }
     }
+    // eslint-disable-next-line
   }, []);
 
   const login = async (email, password) => {
@@ -79,14 +86,14 @@ export const AuthProvider = ({ children }) => {
 
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-      // Definir usuário e buscar detalhes
-      setUser({ email, role });
-      fetchUserDetails(); // Atualize detalhes após login bem-sucedido
+      // Buscar detalhes completos do usuário (inclui id)
+      const userData = await fetchUserDetails();
 
       // Capturar a informação de onde o usuário logou
-      const ip = await getIpAddress(); // função para obter o IP ou outra informação de localização
-      const referer = window.location.href; // URL atual como referer
-      logAccess(ip, referer, role); // Enviar informação de acesso
+      const ip = await getIpAddress();
+      const referer = window.location.href;
+      // Enviar o id do usuário logado
+      logAccess(ip, referer, role, userData?.id);
 
       return { token, role };
     } catch (error) {
@@ -134,22 +141,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error(
         "Erro ao atualizar o token:",
-        error.response?.data || error.message
-      );
-      logout();
-    }
-  };
-
-  // Adicionar uma função para buscar os detalhes do usuário
-  const fetchUserDetails = async () => {
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/auth/me`
-      );
-      setUser(response.data);
-    } catch (error) {
-      console.error(
-        "Erro ao obter detalhes do usuário:",
         error.response?.data || error.message
       );
       logout();

@@ -1,9 +1,9 @@
 const express = require('express');
-const { ClienteAluguel } = require('../models'); // Certifique-se de que o caminho esteja correto
+const { ClienteAluguel } = require('../models');
 
 const router = express.Router();
 
-// Rota para adicionar um cliente de aluguel
+// 1. Rota para adicionar cliente
 router.post('/clientealuguel', async (req, res) => {
   const { nome, cpf, email, telefone, valor_aluguel, dia_vencimento } = req.body;
 
@@ -23,7 +23,7 @@ router.post('/clientealuguel', async (req, res) => {
   }
 });
 
-// Rota para listar alugueis
+// 2. Rota para listar todos os clientes SEM histórico
 router.get('/clientealuguel', async (req, res) => {
   try {
     const clienteAlugueis = await ClienteAluguel.findAll();
@@ -34,29 +34,101 @@ router.get('/clientealuguel', async (req, res) => {
   }
 });
 
-// Rota para deletar um cliente de aluguel
-router.delete('/clientealuguel/:id', async (req, res) => {
-  const { id } = req.params;
-
+// 3. Rota para buscar cliente específico SEM histórico
+router.get('/clientealuguel/:id', async (req, res) => {
   try {
-    const result = await ClienteAluguel.destroy({
-      where: {
-        id: id,
-      },
-    });
-
-    if (!result) {
-      return res.status(404).json({ error: 'Cliente não encontrado.' });
+    const cliente = await ClienteAluguel.findByPk(req.params.id);
+    
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
     }
-
-    res.status(204).send(); // Retorna 204 No Content
+    
+    res.status(200).json(cliente);
   } catch (error) {
-    console.error('Erro ao excluir cliente:', error);
-    res.status(500).json({ error: 'Erro ao excluir cliente.' });
+    console.error("Erro ao buscar cliente:", error);
+    res.status(500).json({ error: "Erro ao buscar cliente." });
   }
 });
 
-// Rota para atualizar um cliente de aluguel
+// 4. Rota para ADICIONAR pagamento (usando JSON)
+router.post('/clientealuguel/:id/pagamento', async (req, res) => {
+  try {
+    const cliente = await ClienteAluguel.findByPk(req.params.id);
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+
+    const { data, valor, status, forma_pagamento } = req.body;
+    const novoPagamento = { 
+      id: Date.now(), // ID temporário baseado em timestamp
+      data, 
+      valor, 
+      status, 
+      forma_pagamento 
+    };
+
+    // Garante que historico_pagamentos é array
+    if (!Array.isArray(cliente.historico_pagamentos)) {
+      cliente.historico_pagamentos = [];
+    }
+
+    // Cria uma nova cópia do array e adiciona o pagamento
+    const novoHistorico = [...cliente.historico_pagamentos, novoPagamento];
+    
+    // Atribui o novo array e marca como mudado
+    cliente.historico_pagamentos = novoHistorico;
+    cliente.changed('historico_pagamentos', true);
+    
+    await cliente.save();
+
+    res.status(200).json(cliente);
+  } catch (error) {
+    console.error('Erro ao adicionar pagamento:', error);
+    res.status(500).json({ error: 'Erro ao adicionar pagamento' });
+  }
+});
+
+// 5. Rota para DELETAR pagamento (usando índice)
+router.delete('/clientealuguel/:id/pagamento/:pagamentoId', async (req, res) => {
+  try {
+    console.log('DELETE chamado para:', req.params);
+    
+    const { id: clienteId, pagamentoId } = req.params;
+    
+    const cliente = await ClienteAluguel.findByPk(clienteId);
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+
+    if (!Array.isArray(cliente.historico_pagamentos)) {
+      return res.status(400).json({ error: 'Histórico de pagamentos não encontrado' });
+    }
+
+    console.log('ANTES - Histórico:', cliente.historico_pagamentos);
+
+    // Filtra removendo o pagamento com o ID específico
+    const novoHistorico = cliente.historico_pagamentos.filter(pag => pag.id != pagamentoId);
+    
+    if (novoHistorico.length === cliente.historico_pagamentos.length) {
+      return res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+
+    // Atribui o novo array e marca como mudado
+    cliente.historico_pagamentos = novoHistorico;
+    cliente.changed('historico_pagamentos', true);
+    
+    await cliente.save();
+
+    console.log('DEPOIS - Histórico:', cliente.historico_pagamentos);
+
+    res.status(200).json(cliente);
+  } catch (error) {
+    console.error('Erro ao deletar pagamento:', error);
+    res.status(500).json({ error: 'Erro ao deletar pagamento' });
+  }
+});
+
+// 6. Rota para atualizar cliente
 router.put('/clientealuguel/:id', async (req, res) => {
   const { id } = req.params;
   const { nome, cpf, email, telefone, valor_aluguel, dia_vencimento, pago, historico_pagamentos } = req.body;
@@ -71,7 +143,7 @@ router.put('/clientealuguel/:id', async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    const updatedClienteAluguel = await ClienteAluguel.findOne({ where: { id: id } });
+    const updatedClienteAluguel = await ClienteAluguel.findByPk(id);
     res.status(200).json(updatedClienteAluguel);
   } catch (error) {
     console.error('Erro ao atualizar cliente:', error);
@@ -79,22 +151,23 @@ router.put('/clientealuguel/:id', async (req, res) => {
   }
 });
 
-router.post('/clientealuguel/:id/pagamento', async (req, res) => {
+// 7. Rota para deletar cliente
+router.delete('/clientealuguel/:id', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const cliente = await ClienteAluguel.findByPk(req.params.id);
-    if (!cliente) {
-      return res.status(404).json({ error: 'Cliente não encontrado' });
+    const result = await ClienteAluguel.destroy({
+      where: { id: id }
+    });
+
+    if (!result) {
+      return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    const { data, valor, status } = req.body;
-    const novoPagamento = { data, valor, status };
-
-    cliente.historico_pagamentos.push(novoPagamento);
-    await cliente.save();
-
-    res.status(200).json(cliente);
+    res.status(204).send();
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao adicionar pagamento' });
+    console.error('Erro ao excluir cliente:', error);
+    res.status(500).json({ error: 'Erro ao excluir cliente.' });
   }
 });
 
