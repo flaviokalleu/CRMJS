@@ -245,7 +245,7 @@ router.post('/clientes', authenticateToken, logFiles, async (req, res) => {
       nome_dependentes: nome_dependentes || null,
       observacoes: observacoes || null,
       status: 'aguardando_aprovacao',
-      user_id
+      userId: user_id // Corrigido: usar userId em vez de user_id
     });
 
     // Agrupar arquivos por campo
@@ -313,7 +313,7 @@ router.put('/clientes/:id', authenticateToken, logFiles, async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    // Verificar permissões
+    // Verificar permissões - Corrigido para usar userId
     if (role === 'Corretor' && cliente.userId !== user.id) {
       return res.status(403).json({ error: 'Você não tem permissão para editar este cliente.' });
     }
@@ -410,7 +410,7 @@ router.delete('/clientes/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    // Verificar permissões
+    // Verificar permissões - Corrigido para usar userId
     if (role === 'Corretor' && cliente.userId !== user.id) {
       return res.status(403).json({ error: 'Você não tem permissão para remover este cliente.' });
     }
@@ -456,7 +456,7 @@ router.patch('/clientes/:id/status', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    // Verificar permissões
+    // Verificar permissões - Corrigido para usar userId
     if (role === 'Corretor' && cliente.userId !== user.id) {
       return res.status(403).json({ error: 'Você não tem permissão para atualizar o status deste cliente.' });
     }

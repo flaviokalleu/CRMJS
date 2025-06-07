@@ -146,15 +146,28 @@ router.post('/refresh-token', async (req, res) => {
   if (!refreshToken) return res.status(401).json({ message: 'Refresh token não fornecido' });
 
   try {
-    const tokenRecord = await Token.findOne({ where: { refreshToken } });
-    if (!tokenRecord || new Date() > tokenRecord.expiresAt) {
+    // Corrigido: usar refresh_token em vez de refreshToken
+    const tokenRecord = await Token.findOne({ where: { refresh_token: refreshToken } });
+    if (!tokenRecord || new Date() > tokenRecord.expires_at) {
       return res.status(403).json({ message: 'Refresh token inválido ou expirado' });
     }
 
-    jwt.verify(refreshToken, REFRESH_SECRET_KEY, (err, user) => {
+    jwt.verify(refreshToken, REFRESH_SECRET_KEY, async (err, user) => {
       if (err) return res.status(403).json({ message: 'Falha na autenticação do refresh token' });
 
-      const newToken = generateToken(user, user.role, SECRET_KEY, '1h');
+      // Corrigido: usar a função generateTokens correta
+      const { token: newToken } = generateTokens(user, user.role);
+      
+      // Atualizar o token no banco de dados
+      await Token.update(
+        { 
+          token: newToken,
+          expires_at: getExpirationDate(60),
+          updated_at: new Date()
+        },
+        { where: { refresh_token: refreshToken } }
+      );
+
       return res.json({ token: newToken });
     });
   } catch (error) {
