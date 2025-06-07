@@ -38,8 +38,20 @@ module.exports = (sequelize) => {
     modelName: 'User',
     tableName: 'users',
     timestamps: true,
+    // Mapear os nomes das colunas do banco
     createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    updatedAt: 'updated_at',
+    // Configurar aliases para usar nos selects
+    scopes: {
+      withTimestamps: {
+        attributes: {
+          include: [
+            ['created_at', 'createdAt'],
+            ['updated_at', 'updatedAt']
+          ]
+        }
+      }
+    }
   });
 
   return User;

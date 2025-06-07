@@ -179,6 +179,13 @@ const Sidebar = ({ open, handleDrawerClose }) => {
           label: "Adicionar Aluguel",
         });
       }
+      if (!items.addItems.some(item => item.to === "/clientes/adicionar")) {
+        items.addItems.push({
+          to: "/clientes/adicionar",
+          icon: <FaUserPlus size={18} />,
+          label: "Adicionar Cliente",
+        });
+      }
 
       // Adicionar listas se não existirem
       const correspondentListItems = [

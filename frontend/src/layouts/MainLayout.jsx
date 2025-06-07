@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { FiMenu } from "react-icons/fi"; // Using Feather Icons
+import { Link, useLocation } from "react-router-dom"; // Use apenas useLocation, não Router
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import { useAuth } from "../context/AuthContext";
 
 const MainLayout = ({ children }) => {
+  const location = useLocation();
+  const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

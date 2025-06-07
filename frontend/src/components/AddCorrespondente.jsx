@@ -1,269 +1,537 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState } from 'react';
+import axios from 'axios';
+import { User, Mail, Lock, Phone, MapPin, CreditCard, Camera, Upload, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api/";
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+// Componente de Input Field (fora do componente principal)
+const InputField = ({ 
+    label, 
+    name, 
+    type = 'text', 
+    icon: Icon, 
+    required = false, 
+    placeholder, 
+    value,
+    onChange,
+    errors,
+    showPassword,
+    showConfirmPassword,
+    setShowPassword,
+    setShowConfirmPassword,
+    ...props 
+}) => {
+    const getInputType = () => {
+        if (type !== 'password') return type;
+        
+        if (name === 'password') {
+            return showPassword ? 'text' : 'password';
+        }
+        if (name === 'confirmPassword') {
+            return showConfirmPassword ? 'text' : 'password';
+        }
+        return 'password';
+    };
+
+    return (
+        <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-200">
+                {label} {required && <span className="text-red-400">*</span>}
+            </label>
+            <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Icon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                    type={getInputType()}
+                    name={name}
+                    value={value || ''}
+                    onChange={onChange}
+                    required={required}
+                    placeholder={placeholder}
+                    className={`w-full pl-10 pr-4 py-3 bg-gray-800/50 border rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 ${
+                        errors[name] ? 'border-red-500' : 'border-gray-600'
+                    }`}
+                    {...props}
+                />
+                {type === 'password' && (
+                    <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            if (name === 'password') {
+                                setShowPassword(!showPassword);
+                            } else if (name === 'confirmPassword') {
+                                setShowConfirmPassword(!showConfirmPassword);
+                            }
+                        }}
+                    >
+                        {(name === 'password' ? showPassword : showConfirmPassword) ? (
+                            <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-200" />
+                        ) : (
+                            <Eye className="h-5 w-5 text-gray-400 hover:text-gray-200" />
+                        )}
+                    </button>
+                )}
+            </div>
+            {errors[name] && (
+                <p className="text-red-400 text-sm flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors[name]}
+                </p>
+            )}
+        </div>
+    );
+};
 
 const AddCorrespondente = () => {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [photo, setPhoto] = useState(null);
-  const [CRECI, setCRECI] = useState("");
-  const [address, setAddress] = useState("");
-  const [PIXConta, setPIXConta] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
+    const [formData, setFormData] = useState({
+        username: '',
+        email: '',
+        first_name: '',
+        last_name: '',
+        address: '',
+        pix_account: '',
+        phone: '',
+        password: '',
+        confirmPassword: ''
+    });
+    
+    const [photo, setPhoto] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '' });
+    const [errors, setErrors] = useState({});
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccessMsg("");
-    setErrorMsg("");
+    // Atualizar dados do formulário
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        
+        // Limpar erro do campo específico
+        if (errors[name]) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: ''
+            }));
+        }
+    };
 
-    const formData = new FormData();
-    formData.append("username", username);
-    formData.append("email", email);
-    formData.append("password", password);
-    formData.append("first_name", firstName);
-    formData.append("last_name", lastName);
-    if (photo) formData.append("photo", photo);
-    formData.append("CRECI", CRECI);
-    formData.append("address", address);
-    formData.append("PIX_Conta", PIXConta);
-    formData.append("phone", phone);
+    // Lidar com upload de foto
+    const handlePhotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validar tipo de arquivo
+            if (!file.type.startsWith('image/')) {
+                setMessage({
+                    type: 'error',
+                    text: 'Por favor, selecione apenas arquivos de imagem'
+                });
+                return;
+            }
 
-    try {
-      const response = await axios.post(`${API_URL}/correspondente`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+            // Validar tamanho (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                setMessage({
+                    type: 'error',
+                    text: 'Imagem muito grande. Máximo permitido: 5MB'
+                });
+                return;
+            }
 
-      setSuccessMsg("Correspondente adicionado com sucesso!");
-      setUsername("");
-      setEmail("");
-      setPassword("");
-      setFirstName("");
-      setLastName("");
-      setPhoto(null);
-      setCRECI("");
-      setAddress("");
-      setPIXConta("");
-      setPhone("");
-    } catch (error) {
-      setErrorMsg("Erro ao adicionar correspondente. Verifique os dados.");
-      console.error("Erro ao adicionar correspondente:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+            setPhoto(file);
+            
+            // Criar preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setPhotoPreview(e.target.result);
+            };
+            reader.readAsDataURL(file);
+            
+            setMessage({ type: '', text: '' });
+        }
+    };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-black">
-      {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="text-white text-xl">Por favor, aguarde...</div>
+    // Validação do formulário
+    const validateForm = () => {
+        const newErrors = {};
+
+        if (!formData.username || formData.username.length < 3) {
+            newErrors.username = 'Username deve ter pelo menos 3 caracteres';
+        }
+
+        if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors.email = 'Email inválido';
+        }
+
+        if (!formData.first_name || formData.first_name.length < 2) {
+            newErrors.first_name = 'Nome deve ter pelo menos 2 caracteres';
+        }
+
+        if (!formData.last_name || formData.last_name.length < 2) {
+            newErrors.last_name = 'Sobrenome deve ter pelo menos 2 caracteres';
+        }
+
+        if (!formData.phone || formData.phone.length < 10) {
+            newErrors.phone = 'Telefone deve ter pelo menos 10 caracteres';
+        }
+
+        if (!formData.password || formData.password.length < 6) {
+            newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            newErrors.confirmPassword = 'Senhas não conferem';
+        }
+
+        if (!photo) {
+            newErrors.photo = 'Foto é obrigatória';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // Submeter formulário
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!validateForm()) {
+            setMessage({
+                type: 'error',
+                text: 'Por favor, corrija os erros no formulário'
+            });
+            return;
+        }
+
+        setLoading(true);
+        setMessage({ type: '', text: '' });
+
+        const submitFormData = new FormData();
+        
+        // Campos obrigatórios
+        submitFormData.append('username', formData.username.trim());
+        submitFormData.append('email', formData.email.trim().toLowerCase());
+        submitFormData.append('first_name', formData.first_name.trim());
+        submitFormData.append('last_name', formData.last_name.trim());
+        submitFormData.append('phone', formData.phone.trim());
+        submitFormData.append('password', formData.password);
+        
+        // Campos opcionais
+        if (formData.address?.trim()) {
+            submitFormData.append('address', formData.address.trim());
+        }
+        if (formData.pix_account?.trim()) {
+            submitFormData.append('pix_account', formData.pix_account.trim());
+        }
+        
+        // Foto
+        if (photo) {
+            submitFormData.append('photo', photo);
+        }
+
+        try {
+            const response = await axios.post(`${API_URL}/correspondente`, submitFormData);
+
+            setMessage({
+                type: 'success',
+                text: 'Correspondente adicionado com sucesso!'
+            });
+
+            // Resetar formulário
+            setFormData({
+                username: '',
+                email: '',
+                first_name: '',
+                last_name: '',
+                address: '',
+                pix_account: '',
+                phone: '',
+                password: '',
+                confirmPassword: ''
+            });
+            setPhoto(null);
+            setPhotoPreview(null);
+            setErrors({});
+
+        } catch (error) {
+            console.error('Erro ao adicionar correspondente:', error);
+            
+            const errorMessage = error.response?.data?.error || 
+                               error.response?.data?.details?.[0] || 
+                               'Erro ao adicionar correspondente';
+            
+            setMessage({
+                type: 'error',
+                text: errorMessage
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-950 to-black py-8 px-4">
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <h1 className="text-4xl font-bold text-white mb-2">
+                        Adicionar Correspondente
+                    </h1>
+                    <p className="text-gray-400">
+                        Preencha os dados para cadastrar um novo correspondente
+                    </p>
+                </div>
+
+                {/* Formulário */}
+                <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-gray-700/50 p-8 shadow-2xl">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        
+                        {/* Upload de Foto */}
+                        <div className="flex flex-col items-center space-y-4 pb-6 border-b border-gray-700/50">
+                            <div className="relative">
+                                {photoPreview ? (
+                                    <div className="relative">
+                                        <img
+                                            src={photoPreview}
+                                            alt="Preview"
+                                            className="w-32 h-32 rounded-full object-cover border-4 border-purple-500/50 shadow-lg"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPhoto(null);
+                                                setPhotoPreview(null);
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
+                                        >
+                                            <AlertCircle className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="w-32 h-32 rounded-full bg-gray-700/50 border-2 border-dashed border-gray-500 flex items-center justify-center">
+                                        <Camera className="h-8 w-8 text-gray-400" />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="flex flex-col items-center space-y-2">
+                                <label className="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                                    <Upload className="h-4 w-4" />
+                                    Escolher Foto
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handlePhotoChange}
+                                        className="hidden"
+                                    />
+                                </label>
+                                <p className="text-xs text-gray-400">
+                                    PNG, JPG, GIF até 5MB
+                                </p>
+                                {errors.photo && (
+                                    <p className="text-red-400 text-sm flex items-center gap-1">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {errors.photo}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Campos do Formulário */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <InputField
+                                label="Username"
+                                name="username"
+                                icon={User}
+                                required
+                                placeholder="Digite o username"
+                                value={formData.username}
+                                onChange={handleInputChange}
+                                errors={errors}
+                                showPassword={showPassword}
+                                showConfirmPassword={showConfirmPassword}
+                                setShowPassword={setShowPassword}
+                                setShowConfirmPassword={setShowConfirmPassword}
+                            />
+                            
+                            <InputField
+                                label="E-mail"
+                                name="email"
+                                type="email"
+                                icon={Mail}
+                                required
+                                placeholder="Digite o e-mail"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                errors={errors}
+                                showPassword={showPassword}
+                                showConfirmPassword={showConfirmPassword}
+                                setShowPassword={setShowPassword}
+                                setShowConfirmPassword={setShowConfirmPassword}
+                            />
+                            
+                            <InputField
+                                label="Nome"
+                                name="first_name"
+                                icon={User}
+                                required
+                                placeholder="Primeiro nome"
+                                value={formData.first_name}
+                                onChange={handleInputChange}
+                                errors={errors}
+                                showPassword={showPassword}
+                                showConfirmPassword={showConfirmPassword}
+                                setShowPassword={setShowPassword}
+                                setShowConfirmPassword={setShowConfirmPassword}
+                            />
+                            
+                            <InputField
+                                label="Sobrenome"
+                                name="last_name"
+                                icon={User}
+                                required
+                                placeholder="Sobrenome"
+                                value={formData.last_name}
+                                onChange={handleInputChange}
+                                errors={errors}
+                                showPassword={showPassword}
+                                showConfirmPassword={showConfirmPassword}
+                                setShowPassword={setShowPassword}
+                                setShowConfirmPassword={setShowConfirmPassword}
+                            />
+                            
+                            <InputField
+                                label="Telefone"
+                                name="phone"
+                                icon={Phone}
+                                required
+                                placeholder="(00) 00000-0000"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                errors={errors}
+                                showPassword={showPassword}
+                                showConfirmPassword={showConfirmPassword}
+                                setShowPassword={setShowPassword}
+                                setShowConfirmPassword={setShowConfirmPassword}
+                            />
+                            
+                            <div className="md:col-span-1">
+                                <InputField
+                                    label="Endereço"
+                                    name="address"
+                                    icon={MapPin}
+                                    placeholder="Endereço completo"
+                                    value={formData.address}
+                                    onChange={handleInputChange}
+                                    errors={errors}
+                                    showPassword={showPassword}
+                                    showConfirmPassword={showConfirmPassword}
+                                    setShowPassword={setShowPassword}
+                                    setShowConfirmPassword={setShowConfirmPassword}
+                                />
+                            </div>
+                            
+                            <div className="md:col-span-2">
+                                <InputField
+                                    label="PIX/Conta"
+                                    name="pix_account"
+                                    icon={CreditCard}
+                                    placeholder="Chave PIX ou dados da conta"
+                                    value={formData.pix_account}
+                                    onChange={handleInputChange}
+                                    errors={errors}
+                                    showPassword={showPassword}
+                                    showConfirmPassword={showConfirmPassword}
+                                    setShowPassword={setShowPassword}
+                                    setShowConfirmPassword={setShowConfirmPassword}
+                                />
+                            </div>
+                            
+                            <InputField
+                                label="Senha"
+                                name="password"
+                                type="password"
+                                icon={Lock}
+                                required
+                                placeholder="Digite a senha"
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                errors={errors}
+                                showPassword={showPassword}
+                                showConfirmPassword={showConfirmPassword}
+                                setShowPassword={setShowPassword}
+                                setShowConfirmPassword={setShowConfirmPassword}
+                            />
+                            
+                            <InputField
+                                label="Confirmar Senha"
+                                name="confirmPassword"
+                                type="password"
+                                icon={Lock}
+                                required
+                                placeholder="Confirme a senha"
+                                value={formData.confirmPassword}
+                                onChange={handleInputChange}
+                                errors={errors}
+                                showPassword={showPassword}
+                                showConfirmPassword={showConfirmPassword}
+                                setShowPassword={setShowPassword}
+                                setShowConfirmPassword={setShowConfirmPassword}
+                            />
+                        </div>
+
+                        {/* Botão de Submit */}
+                        <div className="pt-6">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                                    loading
+                                        ? 'bg-gray-600 cursor-not-allowed text-gray-300'
+                                        : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                                }`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+                                        Criando Correspondente...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle className="h-5 w-5" />
+                                        Adicionar Correspondente
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Mensagens */}
+                    {message.text && (
+                        <div className={`mt-6 p-4 rounded-xl border flex items-center gap-3 ${
+                            message.type === 'success'
+                                ? 'bg-green-900/30 border-green-500/50 text-green-400'
+                                : 'bg-red-900/30 border-red-500/50 text-red-400'
+                        }`}>
+                            {message.type === 'success' ? (
+                                <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                            ) : (
+                                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                            )}
+                            <span className="font-medium">{message.text}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
-      )}
-      <div
-        className={`bg-blue-950/90 p-8 rounded-2xl shadow-2xl w-full max-w-lg border border-blue-900/40 ${
-          loading ? "opacity-50" : ""
-        }`}
-      >
-        <h1 className="text-3xl font-extrabold text-white mb-8 text-center tracking-tight">
-          Adicionar Correspondente
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-white font-semibold mb-1"
-            >
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-white font-semibold mb-1"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-white font-semibold mb-1"
-            >
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="firstName"
-              className="block text-white font-semibold mb-1"
-            >
-              Nome
-            </label>
-            <input
-              id="firstName"
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="lastName"
-              className="block text-white font-semibold mb-1"
-            >
-              Sobrenome
-            </label>
-            <input
-              id="lastName"
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="photo"
-              className="block text-white font-semibold mb-1"
-            >
-              Foto
-            </label>
-            <input
-              id="photo"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setPhoto(e.target.files[0])}
-              disabled={loading}
-              className="w-full text-white file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-700 file:text-white hover:file:bg-blue-600"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="CRECI"
-              className="block text-white font-semibold mb-1"
-            >
-              CRECI
-            </label>
-            <input
-              id="CRECI"
-              type="text"
-              value={CRECI}
-              onChange={(e) => setCRECI(e.target.value)}
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="address"
-              className="block text-white font-semibold mb-1"
-            >
-              Endereço
-            </label>
-            <input
-              id="address"
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="PIXConta"
-              className="block text-white font-semibold mb-1"
-            >
-              PIX/Conta
-            </label>
-            <input
-              id="PIXConta"
-              type="text"
-              value={PIXConta}
-              onChange={(e) => setPIXConta(e.target.value)}
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-white font-semibold mb-1"
-            >
-              Telefone
-            </label>
-            <input
-              id="phone"
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              disabled={loading}
-              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
-            />
-          </div>
-          {successMsg && (
-            <div className="text-green-400 text-center font-semibold">
-              {successMsg}
-            </div>
-          )}
-          {errorMsg && (
-            <div className="text-red-400 text-center font-semibold">
-              {errorMsg}
-            </div>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 mt-4 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white"
-          >
-            {loading ? "Adicionando..." : "Adicionar Correspondente"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default AddCorrespondente;

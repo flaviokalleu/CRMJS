@@ -1,397 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext();
-
-// Função para obter IP do usuário
-const getIpAddress = async () => {
-  try {
-    const response = await axios.get("https://api.ipify.org?format=json");
-    return response.data.ip;
-  } catch (error) {
-    console.error("Erro ao obter IP:", error.response?.data || error.message);
-    return "Unknown";
-  }
-};
-
-// Log de acesso com informações do usuário
-const logAccess = async (ip, referer, roles, userId, action = 'login') => {
-  try {
-    await axios.post(`${process.env.REACT_APP_API_URL}/acessos`, {
-      ip,
-      referer,
-      roles: roles.join(','), // Converter array de roles para string
-      userId,
-      action,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
-    });
-  } catch (error) {
-    console.error(
-      "Erro ao registrar acesso:",
-      error.response?.data || error.message
-    );
-  }
-};
-
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [userRoles, setUserRoles] = useState([]);
-  const [primaryRole, setPrimaryRole] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Função para extrair roles do usuário baseado nas flags
-  const extractUserRoles = useCallback((userData) => {
-    const roles = [];
-    
-    if (userData?.is_administrador) roles.push('administrador');
-    if (userData?.is_corretor) roles.push('corretor');
-    if (userData?.is_correspondente) roles.push('correspondente');
-    
-    return roles;
-  }, []);
-
-  // Função para determinar o papel primário
-  const determinePrimaryRole = useCallback((roles) => {
-    if (roles.includes('administrador')) return 'administrador';
-    if (roles.includes('corretor')) return 'corretor';
-    if (roles.includes('correspondente')) return 'correspondente';
-    return null;
-  }, []);
-
-  // Função para buscar detalhes do usuário
-  const fetchUserDetails = useCallback(async (showLoading = false) => {
-    try {
-      if (showLoading) setLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("Token não encontrado");
-      }
-
-      // Configurar headers
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
-
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/auth/me`,
-        config
-      );
-
-      if (response.data) {
-        const userData = response.data;
-        const roles = extractUserRoles(userData);
-        const primary = determinePrimaryRole(roles);
-
-        setUser(userData);
-        setUserRoles(roles);
-        setPrimaryRole(primary);
-
-        return userData;
-      }
-
-      throw new Error("Dados do usuário não encontrados");
-
-    } catch (error) {
-      console.error(
-        "Erro ao obter detalhes do usuário:",
-        error.response?.data || error.message
-      );
-
-      // Tratamento específico de erros
-      if (error.response?.status === 401) {
-        setError("Sessão expirada");
-        logout();
-      } else {
-        setError(error.message || "Erro ao carregar usuário");
-      }
-
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [extractUserRoles, determinePrimaryRole]);
-
-  // Verificar token na inicialização
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const token = localStorage.getItem("authToken");
-      const tokenExpiry = localStorage.getItem("tokenExpiry");
-
-      if (token && tokenExpiry) {
-        const now = new Date().getTime();
-
-        // Verificar se o token ainda é válido
-        if (now < tokenExpiry) {
-          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          await fetchUserDetails(true);
-        } else {
-          // Token expirado, tentar atualizar
-          await updateToken();
-        }
-      } else {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-  }, [fetchUserDetails]);
-
-  // Função de login
-  const login = async (email, password) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/auth/login`,
-        { email, password }
-      );
-
-      const { token, refreshToken, user: userData } = response.data;
-
-      // Calcular tempo de expiração (1 hora)
-      const expiryTime = new Date().getTime() + 3600000;
-
-      // Salvar tokens
-      localStorage.setItem("authToken", token);
-      localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("tokenExpiry", expiryTime);
-
-      // Configurar axios
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      // Processar dados do usuário
-      const roles = extractUserRoles(userData);
-      const primary = determinePrimaryRole(roles);
-
-      setUser(userData);
-      setUserRoles(roles);
-      setPrimaryRole(primary);
-
-      // Log de acesso
-      try {
-        const ip = await getIpAddress();
-        const referer = window.location.href;
-        await logAccess(ip, referer, roles, userData.id, 'login');
-      } catch (logError) {
-        console.warn("Erro ao registrar log de acesso:", logError);
-      }
-
-      return { 
-        success: true, 
-        token, 
-        user: userData, 
-        roles, 
-        primaryRole: primary 
-      };
-
-    } catch (error) {
-      console.error(
-        "Erro ao fazer login:",
-        error.response?.data || error.message
-      );
-
-      const errorMessage = error.response?.data?.message ||
-        "Falha no login. Verifique suas credenciais.";
-      
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Função de logout
-  const logout = useCallback(async () => {
-    try {
-      // Log de logout se usuário estiver logado
-      if (user) {
-        try {
-          const ip = await getIpAddress();
-          const referer = window.location.href;
-          await logAccess(ip, referer, userRoles, user.id, 'logout');
-        } catch (logError) {
-          console.warn("Erro ao registrar log de logout:", logError);
-        }
-      }
-    } catch (error) {
-      console.warn("Erro durante logout:", error);
-    } finally {
-      // Limpar dados locais
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("tokenExpiry");
-      delete axios.defaults.headers.common["Authorization"];
-
-      // Limpar estado
-      setUser(null);
-      setUserRoles([]);
-      setPrimaryRole(null);
-      setError(null);
-      setLoading(false);
-    }
-  }, [user, userRoles]);
-
-  // Função para atualizar token
-  const updateToken = useCallback(async () => {
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new Error("Refresh token não encontrado");
-      }
-
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/auth/refresh-token`,
-        { refreshToken }
-      );
-
-      const { token } = response.data;
-
-      // Atualizar token
-      const expiryTime = new Date().getTime() + 3600000;
-      localStorage.setItem("authToken", token);
-      localStorage.setItem("tokenExpiry", expiryTime);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      // Buscar dados atualizados do usuário
-      await fetchUserDetails();
-
-      return true;
-
-    } catch (error) {
-      console.error(
-        "Erro ao atualizar o token:",
-        error.response?.data || error.message
-      );
-      await logout();
-      return false;
-    }
-  }, [fetchUserDetails, logout]);
-
-  // Função para atualizar perfil do usuário
-  const updateUserProfile = useCallback(async (profileData) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem("authToken");
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      };
-
-      const response = await axios.put(
-        `${process.env.REACT_APP_API_URL}/auth/profile`,
-        profileData,
-        config
-      );
-
-      if (response.data) {
-        const userData = response.data;
-        const roles = extractUserRoles(userData);
-        const primary = determinePrimaryRole(roles);
-
-        setUser(userData);
-        setUserRoles(roles);
-        setPrimaryRole(primary);
-
-        return { success: true, user: userData };
-      }
-
-      throw new Error("Erro na resposta do servidor");
-
-    } catch (error) {
-      console.error("Erro ao atualizar perfil:", error);
-      const errorMessage = error.response?.data?.message || "Erro ao atualizar perfil";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  }, [extractUserRoles, determinePrimaryRole]);
-
-  // Função para verificar se tem um papel específico
-  const hasRole = useCallback((role) => {
-    return userRoles.includes(role);
-  }, [userRoles]);
-
-  // Função para verificar múltiplos papéis
-  const hasMultipleRoles = useCallback(() => {
-    return userRoles.length > 1;
-  }, [userRoles]);
-
-  // Função para verificar permissões específicas
-  const hasPermission = useCallback((permission) => {
-    switch (permission) {
-      case 'admin':
-        return hasRole('administrador');
-      case 'manage_properties':
-        return hasRole('administrador') || hasRole('corretor');
-      case 'manage_clients':
-        return userRoles.length > 0; // Qualquer papel logado
-      case 'view_reports':
-        return hasRole('administrador') || hasRole('corretor');
-      case 'system_settings':
-        return hasRole('administrador');
-      default:
-        return false;
-    }
-  }, [hasRole, userRoles]);
-
-  // Função para refresh manual
-  const refreshUser = useCallback(() => {
-    return fetchUserDetails(true);
-  }, [fetchUserDetails]);
-
-  // Valor do contexto
-  const contextValue = {
-    // Dados do usuário
-    user,
-    userRoles,
-    primaryRole,
-    
-    // Estados
-    loading,
-    error,
-    
-    // Funções principais
-    login,
-    logout,
-    updateToken,
-    updateUserProfile,
-    refreshUser,
-    
-    // Funções de verificação
-    hasRole,
-    hasMultipleRoles,
-    hasPermission,
-    
-    // Estados booleanos para conveniência
-    isAuthenticated: !!user,
-    isAdmin: hasRole('administrador'),
-    isCorretor: hasRole('corretor'),
-    isCorrespondente: hasRole('correspondente'),
-    
-    // Dados derivados
-    userName: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '',
-    userEmail: user?.email || '',
-    userId: user?.id || null
-  };
-
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -399,6 +9,340 @@ export const useAuth = () => {
     throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Função para verificar autenticação - MELHORADA
+  const checkAuth = useCallback(async () => {
+    console.log('🔍 Iniciando verificação de autenticação...');
+    
+    const token = localStorage.getItem('authToken');
+    
+    if (!token) {
+      console.log('❌ Nenhum token encontrado no localStorage');
+      setLoading(false);
+      setIsAuthenticated(false);
+      setUser(null);
+      return false;
+    }
+
+    try {
+      console.log('📡 Verificando token no servidor...');
+      
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/auth/check-auth`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // Timeout de 10 segundos
+        }
+      );
+
+      if (response.data.authenticated) {
+        console.log('✅ Usuário autenticado:', response.data.user.email);
+        console.log('⏰ Token expira em:', response.data.expiresAt);
+        
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        
+        // Atualizar token se necessário
+        if (response.data.token && response.data.token !== token) {
+          console.log('🔄 Atualizando token no localStorage');
+          localStorage.setItem('authToken', response.data.token);
+        }
+        
+        return true;
+      } else {
+        throw new Error('Não autenticado');
+      }
+    } catch (error) {
+      console.error('❌ Erro na verificação de autenticação:', error);
+      
+      // Se for erro 401 ou 403, limpar dados
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('🧹 Limpando dados de autenticação inválidos');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+      }
+      
+      setUser(null);
+      setIsAuthenticated(false);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Verificar autenticação ao carregar e periodicamente
+  useEffect(() => {
+    // Verificação inicial
+    checkAuth();
+
+    // Verificação periódica a cada 5 minutos
+    const interval = setInterval(() => {
+      console.log('🔄 Verificação periódica de token...');
+      checkAuth();
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(interval);
+  }, [checkAuth]);
+
+  // Função de login - MELHORADA
+  const login = async (credentials) => {
+    try {
+      setLoading(true);
+      console.log('🔐 Tentando fazer login...');
+      
+      const loginData = {
+        email: credentials.email?.trim(),
+        password: credentials.password
+      };
+
+      if (!loginData.email || !loginData.password) {
+        throw new Error('Email e senha são obrigatórios');
+      }
+
+      console.log('📤 Enviando dados de login...');
+
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/login`,
+        loginData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+
+      const { token, refreshToken, user: userData } = response.data;
+
+      if (!token || !userData) {
+        throw new Error('Resposta inválida do servidor');
+      }
+
+      // Salvar tokens
+      localStorage.setItem('authToken', token);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+
+      // Atualizar estado
+      setUser(userData);
+      setIsAuthenticated(true);
+      
+      console.log('✅ Login realizado com sucesso');
+      console.log('👤 Usuário logado:', userData.email);
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('❌ Erro no login:', error);
+      
+      // Limpar dados em caso de erro
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      setUser(null);
+      setIsAuthenticated(false);
+      
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          error.message ||
+                          'Erro ao fazer login';
+      
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função de logout - MELHORADA
+  const logout = useCallback(async () => {
+    console.log('🔓 Iniciando logout...');
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (token) {
+        try {
+          await axios.post(
+            `${process.env.REACT_APP_API_URL}/auth/logout`,
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: 5000
+            }
+          );
+          console.log('✅ Logout no servidor realizado');
+        } catch (error) {
+          console.warn('⚠️ Erro ao fazer logout no servidor:', error.message);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erro durante logout:', error);
+    } finally {
+      // Sempre limpar dados locais
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      setUser(null);
+      setIsAuthenticated(false);
+      
+      console.log('🧹 Dados locais limpos');
+    }
+  }, []);
+
+  // Função para refresh do token
+  const refreshAuth = useCallback(async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (!refreshToken) {
+        throw new Error('Refresh token não encontrado');
+      }
+
+      console.log('🔄 Renovando token...');
+
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/refresh-token`,
+        { refreshToken },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+
+      const { token } = response.data;
+      localStorage.setItem('authToken', token);
+      
+      console.log('✅ Token renovado com sucesso');
+      return token;
+    } catch (error) {
+      console.error('❌ Erro ao renovar token:', error);
+      await logout();
+      throw error;
+    }
+  }, [logout]);
+
+  // Interceptor para renovação automática de token
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (
+          error.response?.status === 401 && 
+          !originalRequest._retry &&
+          isAuthenticated
+        ) {
+          originalRequest._retry = true;
+
+          try {
+            console.log('🔄 Tentando renovar token automaticamente...');
+            const newToken = await refreshAuth();
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return axios(originalRequest);
+          } catch (refreshError) {
+            console.error('❌ Falha ao renovar token automaticamente');
+            return Promise.reject(refreshError);
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, [isAuthenticated, refreshAuth]);
+
+  // Função para verificar se o usuário tem uma role específica
+  const hasRole = useCallback((role) => {
+    if (!user) return false;
+    
+    switch (role.toLowerCase()) {
+      case 'administrador':
+      case 'admin':
+        return user.is_administrador;
+      case 'correspondente':
+        return user.is_correspondente;
+      case 'corretor':
+        return user.is_corretor;
+      default:
+        return false;
+    }
+  }, [user]);
+
+  // Função para obter o tipo do usuário
+  const getUserType = useCallback(() => {
+    if (!user) return null;
+    
+    if (user.is_administrador) return 'administrador';
+    if (user.is_correspondente) return 'correspondente';
+    if (user.is_corretor) return 'corretor';
+    return 'user';
+  }, [user]);
+
+  // Verificar se está próximo da expiração e avisar
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const checkExpiration = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      try {
+        // Decodificar token para verificar expiração
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expTime = payload.exp * 1000; // Converter para ms
+        const now = Date.now();
+        const timeLeft = expTime - now;
+
+        // Se restam menos de 10 minutos, tentar renovar
+        if (timeLeft < 10 * 60 * 1000 && timeLeft > 0) {
+          console.log('⚠️ Token expira em breve, renovando...');
+          await refreshAuth();
+        }
+      } catch (error) {
+        console.error('❌ Erro ao verificar expiração:', error);
+      }
+    };
+
+    // Verificar a cada minuto
+    const interval = setInterval(checkExpiration, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refreshAuth]);
+
+  const value = {
+    user,
+    loading,
+    isAuthenticated,
+    login,
+    logout,
+    checkAuth,
+    refreshAuth,
+    hasRole,
+    getUserType
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthContext;

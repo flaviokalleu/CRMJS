@@ -1,30 +1,28 @@
 'use strict';
-const { Model } = require('sequelize');
+const { DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
-  class Token extends Model {
-    static associate(models) {
-      Token.belongsTo(models.User, {
-        foreignKey: 'user_id',
-        as: 'user'
-      });
-    }
-  }
-
-  Token.init({
+module.exports = (sequelize) => {
+  const Token = sequelize.define('Token', {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      autoIncrement: true,
-      allowNull: false
+      autoIncrement: true
     },
     token: {
       type: DataTypes.TEXT,
-      allowNull: false
+      allowNull: false,
+      unique: {
+        name: 'tokens_token_unique',
+        msg: 'Token já existe'
+      }
     },
     refresh_token: {
       type: DataTypes.TEXT,
-      allowNull: false
+      allowNull: true,
+      unique: {
+        name: 'tokens_refresh_token_unique',
+        msg: 'Refresh token já existe'
+      }
     },
     user_id: {
       type: DataTypes.INTEGER,
@@ -35,8 +33,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     user_type: {
-      type: DataTypes.STRING,
-      allowNull: false
+      type: DataTypes.STRING(50),
+      allowNull: true
     },
     expires_at: {
       type: DataTypes.DATE,
@@ -44,22 +42,49 @@ module.exports = (sequelize, DataTypes) => {
     },
     email: {
       type: DataTypes.STRING(255),
-      allowNull: true
+      allowNull: false
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
     }
   }, {
-    sequelize,
-    modelName: 'Token',
     tableName: 'tokens',
-    underscored: true,
-    timestamps: true,
+    timestamps: false, // Usando campos manuais
     indexes: [
       {
         unique: true,
-        fields: ['user_id', 'user_type'],
-        name: 'unique_user_id_user_type'
+        fields: ['token']
+      },
+      {
+        unique: true,
+        fields: ['refresh_token']
+      },
+      {
+        fields: ['user_id']
+      },
+      {
+        fields: ['email']
+      },
+      {
+        fields: ['expires_at']
       }
     ]
   });
+
+  // Definir associações
+  Token.associate = (models) => {
+    Token.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user'
+    });
+  };
 
   return Token;
 };
